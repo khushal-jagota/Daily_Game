@@ -1,6 +1,6 @@
 # Prototype Implementation: Phase 1 - Setup and Static Rendering
 
-**Goal:** Set up the project, copy necessary files, define initial data, and render the static crossword grid structure.
+**Goal:** Set up the project, copy necessary files, define initial data, and render the static crossword grid structure using the `useGameStateManager` hook.
 
 ---
 
@@ -65,10 +65,10 @@
     *   [x] Test Checked
 *   **Notes:**
     ```
-    All files have been successfully copied. Fixed import paths in all files to use '../../types' instead of './types'. 
-    
+    All files have been successfully copied. Fixed import paths in all files to use '../../types' instead of './types'.
+
     Also moved CrosswordStyles.ts from CrosswordCore to src/Crossword/styles/ and created an index.ts file there to export all styles for easier imports.
-    
+
     There are some TypeScript/linter errors that will need to be addressed in subsequent steps, but the major path issues are resolved.
     ```
 
@@ -88,16 +88,27 @@
 
 ---
 
-### Step 1.2: Basic `GameStateManager` (Data Holder)
+### Step 1.2: Basic `useGameStateManager` Hook (Data Holder)
 
-*   **Implementation:** Create `src/GameFlow/state/GameStateManager.ts`. Define a basic class or custom hook. Import `prototypePuzzle` from `themedPuzzles.ts`. Store this data in an internal variable/state. Initialize an empty `completedWords = {}`. Add a method `getPuzzleData()` that returns the stored puzzle data.
-*   **Test:** In `src/App.tsx`, import and instantiate `GameStateManager`. Call `getPuzzleData()` and `console.log` the result. Run the app and check the browser console to verify the puzzle data is loaded correctly.
+*   **Implementation:**
+    1.  Create the file `src/GameFlow/state/useGameStateManager.ts`. **<-- Updated Filename**
+    2.  Define and export a custom hook function named `useGameStateManager` from this file (`export function useGameStateManager() { ... }`). This function will encapsulate our game's state logic.
+    3.  Inside the `useGameStateManager` hook, import the `prototypePuzzle` data from `src/Puzzle/data/themedPuzzles.ts`.
+    4.  Use React's `useState` hook to initialize and hold the imported `prototypePuzzle` data. This integrates the data into React's state management system.
+    5.  Also using `useState`, initialize an empty object `{}` to eventually hold the state for `completedWords`. This prepares for future steps but won't be used immediately.
+    6.  For this phase, ensure the `useGameStateManager` hook returns an object containing *only* the `puzzleData` state value. Other state (like `completedWords`) should be initialized but not yet returned.
+*   **Test:**
+    1.  In the `src/App.tsx` functional component, import the hook: `import { useGameStateManager } from './GameFlow/state/useGameStateManager';`. **<-- Updated Import Path**
+    2.  *Call* the `useGameStateManager` hook near the top of the component body (`const { puzzleData } = useGameStateManager();`). **<-- Emphasize calling the hook**
+    3.  Use `console.log` within the `App` component to output the `puzzleData` received from the hook.
+    4.  Run the application (`npm run dev`).
+    5.  Check the browser's developer console to verify that the structure and content of `prototypePuzzle` are logged correctly.
 *   **Check:**
     *   [ ] Code Completed
     *   [ ] Test Checked
 *   **Notes:**
     ```
-    [Your notes here]
+    Using a custom hook (`useGameStateManager`) establishes the reactive foundation needed for later phases. Only puzzleData is exposed initially to keep Phase 1 focused.
     ```
 
 ---
@@ -105,10 +116,10 @@
 ### Step 1.3: Initial `CrosswordProvider` Render
 
 *   **Implementation:** In `src/App.tsx`:
-    *   Instantiate your basic `GameStateManager`.
+    *   *Call* the `useGameStateManager` hook to get the game state: `const { puzzleData } = useGameStateManager();`. **<-- Updated: Call hook**
     *   Import `CrosswordProvider` from `src/Crossword/components/CrosswordCore/CrosswordProvider.tsx`.
     *   Import and wrap with a basic `ThemeProvider` from `styled-components` (`<ThemeProvider theme={{}}>...</ThemeProvider>`).
-    *   Render `<CrosswordProvider data={gameStateManager.getPuzzleData()} useStorage={false}><div>Loading Grid...</div></CrosswordProvider>`.
+    *   Render `<CrosswordProvider data={puzzleData} useStorage={false}><div>Loading Grid...</div></CrosswordProvider>`. **<-- Updated: Use puzzleData from hook**
 *   **Test:** Run the app. Check the browser's React DevTools. Verify `CrosswordProvider` renders without crashing and its `data` prop matches your puzzle. Check the console for errors. You should see "Loading Grid..." on the page.
 *   **Check:**
     *   [ ] Code Completed
