@@ -1,0 +1,9 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# Your rule content
+
+When asked to implement on a step within a plan. First execute on the code part, then complete the test, filling out the checkboxes, and the notes section with brief relevant information.
