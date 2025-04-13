@@ -59,10 +59,6 @@ export const crosswordProviderPropTypes = {
    */
   data: cluesInputShapeOriginal.isRequired,
 
-  /** presentation values for the crossword; these override any values coming from a parent ThemeProvider context. */
-  // Removed PropTypes definition for theme, relying on TypeScript interface now
-  // theme: PropTypes.shape({ ... }),
-
   /** whether to use browser storage to persist the player's work-in-progress */
   useStorage: PropTypes.bool,
 
@@ -167,11 +163,6 @@ export type CrosswordProviderProps = EnhancedProps<
      * input format</a> for details.
      */
     data: CluesInput;
-
-    /**
-     * Theme properties for the crossword
-     */
-    theme?: Partial<CrosswordTheme>;
 
     /**
      * Whether to use browser storage to persist the player's work-in-progress.
@@ -324,27 +315,6 @@ export interface CrosswordProviderImperative {
   setGuess: (row: number, col: number, guess: string) => void;
 }
 
-// Define the default theme values using the CrosswordTheme interface
-const defaultTheme: CrosswordTheme = {
-  allowNonSquare: false,
-  columnBreakpoint: '768px',
-  gridBackground: 'rgb(0,0,0)',
-  cellBackground: 'rgb(255,255,255)',
-  cellBorder: 'rgb(0,0,0)',
-  textColor: 'rgb(0,0,0)',
-  numberColor: 'rgba(0,0,0, 0.25)',
-  focusBackground: 'rgb(255,255,0)',
-  highlightBackground: 'rgb(255,255,204)',
-  // Provide defaults for other theme properties if needed
-  bookColor: undefined,
-  correctBackground: '#a0e8a0', // Example default
-  correctColor: '#053b05', // Example default
-  wordCorrectBackground: '#ffe17a', // Example default
-  wordCorrectColor: '#8b6b00', // Example default
-  progressBarBackground: '#e0e0e0', // Example default
-  progressBarFill: '#76c7c0', // Example default
-};
-
 /**
  * The fundamental logic and data management component for react-crossword.
  * Prior to 4.0, puzzle management was built into the `Crossword` component.  As
@@ -360,7 +330,6 @@ const CrosswordProvider = React.forwardRef<
   (
     {
       data,
-      theme,
       onAnswerComplete,
       onAnswerCorrect,
       onCorrect,
@@ -378,25 +347,19 @@ const CrosswordProvider = React.forwardRef<
     },
     ref
   ) => {
-    // Use the ThemeContext directly without the problematic type argument
+    // Use the ThemeContext directly
     const contextTheme = useContext(ThemeContext);
 
-    // The final theme is the merger of three values: the "theme" property
-    // passed to the component (which takes precedence), any values from
-    // ThemeContext, and finally the "defaultTheme" values fill in for any
-    // needed ones that are missing.
+    // Use context theme directly, only cleaning null values if needed
     const finalTheme = useMemo<DefaultTheme>(
       () => {
-        // First merge the themes in priority order
-        const mergedTheme = { ...defaultTheme, ...contextTheme, ...theme };
-        
-        // Then clean the merged theme by replacing any null values with undefined
-        // to ensure compatibility with DefaultTheme (which expects string | undefined)
+        // Clean any null values, replacing them with undefined
+        // for compatibility with DefaultTheme (which expects string | undefined)
         return Object.fromEntries(
-          Object.entries(mergedTheme).map(([key, value]) => [key, value === null ? undefined : value])
+          Object.entries(contextTheme || {}).map(([key, value]) => [key, value === null ? undefined : value])
         ) as DefaultTheme;
       },
-      [contextTheme, theme]
+      [contextTheme]
     );
 
     // The original Crossword implementation used separate state to track size

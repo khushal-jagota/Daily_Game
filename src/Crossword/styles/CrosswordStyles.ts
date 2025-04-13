@@ -1,7 +1,9 @@
 import styled, { createGlobalStyle, keyframes } from 'styled-components';
 
-// Custom theme with correct answer highlighting
-export const theme = {
+// Canonical theme object with all required properties for crossword components
+export const crosswordTheme = {
+  // Core theme properties
+  allowNonSquare: false,
   columnBreakpoint: '768px',
   gridBackground: '#fffaf0',
   cellBackground: '#fffaf0',
@@ -10,13 +12,21 @@ export const theme = {
   numberColor: '#7f8c8d',
   focusBackground: '#e3f2fd',
   highlightBackground: '#f5f9ff',
+  bookColor: undefined, // Optional property
+  
+  // Correct answer styling
   correctBackground: '#e6f7e9', // Light green for correct answers
   correctColor: '#27ae60',      // Green text for correct answers
   wordCorrectBackground: '#FFD700', // Bright gold background for correct words
   wordCorrectColor: '#B8860B',      // Dark gold text for correct words
+  
+  // Progress tracking
   progressBarBackground: '#e9ecef', // Light gray background for progress bar
   progressBarFill: '#28a745',       // Green fill for progress bar
 };
+
+// For backward compatibility
+export const theme = crosswordTheme;
 
 // Define pulse animation for word completion
 const wordGoldPulse = keyframes`
@@ -53,11 +63,11 @@ const headerCompletePulse = keyframes`
 // Add CSS for correct answers
 export const GlobalStyle = createGlobalStyle`
   .guess-text-correct {
-    fill: ${theme.correctColor} !important;
+    fill: ${crosswordTheme.correctColor} !important;
   }
   
   .guess-text-correct + rect {
-    fill: ${theme.correctBackground} !important;
+    fill: ${crosswordTheme.correctBackground} !important;
   }
   
   .cell-correct {
@@ -65,11 +75,11 @@ export const GlobalStyle = createGlobalStyle`
   }
   
   .cell-correct rect {
-    fill: ${theme.correctBackground} !important;
+    fill: ${crosswordTheme.correctBackground} !important;
   }
   
   .cell-correct text:last-child {
-    fill: ${theme.correctColor} !important;
+    fill: ${crosswordTheme.correctColor} !important;
   }
   
   /* Styling for cells in a complete correct word - with higher specificity and !important to override */
@@ -81,12 +91,12 @@ export const GlobalStyle = createGlobalStyle`
   }
   
   g.clue-cell.word-correct rect {
-    fill: ${theme.wordCorrectBackground} !important;
+    fill: ${crosswordTheme.wordCorrectBackground} !important;
     transition: fill 0.3s ease-in-out;
   }
   
   g.clue-cell.word-correct text:last-child {
-    fill: ${theme.wordCorrectColor} !important;
+    fill: ${crosswordTheme.wordCorrectColor} !important;
     transition: fill 0.3s ease-in-out;
   }
   

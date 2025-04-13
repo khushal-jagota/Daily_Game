@@ -1,5 +1,8 @@
 import PropTypes, { InferProps } from 'prop-types';
 
+// Export CrosswordTheme from theme.ts
+export * from './theme';
+
 export type OverrideProps<T, O> = Omit<T, keyof O> & O;
 
 export type EnhancedProps<T, O> = OverrideProps<InferProps<T>, O>;
