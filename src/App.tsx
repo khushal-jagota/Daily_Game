@@ -4,9 +4,14 @@ import CrosswordGrid from './Crossword/components/CrosswordCore/CrosswordGrid'
 import { ThemeProvider } from 'styled-components'
 import { crosswordTheme } from './Crossword/styles/CrosswordStyles'
 import { AppWrapper, Banner, CrosswordArea, ClueArea, KeyboardArea } from './Layout/components'
+import { useEffect } from 'react'
 
 function App() {
-  const { puzzleData } = useGameStateManager();
+  const { puzzleData, selectedRow, selectedCol, currentDirection, currentNumber } = useGameStateManager();
+
+  useEffect(() => {
+    console.log('Focus/Selection State:', { selectedRow, selectedCol, currentDirection, currentNumber });
+  }, [selectedRow, selectedCol, currentDirection, currentNumber]);
 
   return (
     <AppWrapper>

@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { prototypePuzzle } from '../../Puzzle/data/themedPuzzles';
-import { CluesInput } from '../../Crossword/types';
+import { CluesInput, Direction } from '../../Crossword/types';
 
 /**
  * Custom hook that manages the game state for the crossword puzzle
- * In Phase 1, it only exposes the puzzle data
+ * In Phase 2, it manages focus/selection state and puzzle data
  */
 export function useGameStateManager() {
   // Initialize state with the prototype puzzle data
@@ -13,8 +13,18 @@ export function useGameStateManager() {
   // Initialize empty object for completed words (will be used in later phases)
   const [completedWords, setCompletedWords] = useState<Record<string, any>>({});
   
-  // For Phase 1, only return the puzzle data
+  // Focus and selection state variables
+  const [selectedRow, setSelectedRow] = useState<number>(0);
+  const [selectedCol, setSelectedCol] = useState<number>(0);
+  const [currentDirection, setCurrentDirection] = useState<Direction>('across');
+  const [currentNumber, setCurrentNumber] = useState<string>('1');
+  
+  // Return state values including the new focus/selection variables
   return {
     puzzleData,
+    selectedRow,
+    selectedCol,
+    currentDirection,
+    currentNumber,
   };
 } 
