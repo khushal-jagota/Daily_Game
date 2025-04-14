@@ -247,8 +247,8 @@
     1.  **Incoming State:** Run app. Verify initial focus/highlight matches initial harness state. Use temporary buttons (optional) or React DevTools to directly change harness state values - verify the grid's visual focus/highlight updates immediately.
     2.  **Outgoing Callbacks:** Click cells, press arrow keys, space/tab, home/end, backspace, delete. Check console logs to verify the correct harness callbacks (`handleHarnessCellSelect`, `handleHarnessMoveRequest`, etc.) are triggered with the expected arguments. Check harness state updates correctly via DevTools. Verify grid visuals reflect the updated harness state after interaction.
 *   **Check:**
-    *   [ ] Code Completed (Harness Setup)
-    *   [ ] Test Checked (Refactored Provider Verified)
+    *   [x] Code Completed (Harness Setup)
+    *   [x] Test Checked (Refactored Provider Verified)
 *   **Notes:**
     ```
     Successfully tested refactored CrosswordProvider via App.tsx harness. Confirmed it renders based on external state props and triggers correct interaction callbacks. Refactoring in Step 2.2 is validated. Remember to remove harness later.
@@ -258,25 +258,121 @@
 
 ### Step 2.4: Implement State Actions in `useGameStateManager`
 
-*   **Scope:** Implement the actual state update logic within the action functions of the central hook.
-*   **Reason:** To centralize the business logic for how interactions update the application state.
-*   **Implementation:** In `src/GameFlow/state/useGameStateManager.ts`:
-    1.  Define and export action functions: `handleCellSelect(row, col)`, `handleMoveRequest(dRow, dCol)`, `handleDirectionToggle()`, `handleMoveToClueStart(direction, number)`, `handleBackspace()`, `handleDelete()`, etc.
-    2.  Implement the logic within each function to calculate the new `selectedRow`, `selectedCol`, `currentDirection`, `currentNumber` based on the action and current state/`puzzleData`. Use the `set` functions from `useState` to update the state.
-    3.  Return these action functions from the hook.
-*   **Test:** Review logic. Unit tests ideal. Runtime testing via Step 2.6.
+*   **Status:** Pending
+*   **Scope:** Implement the actual state update logic within action functions inside the `useGameStateManager` hook. These functions will handle the core game mechanics based on user interaction intents reported by `CrosswordProvider`.
+*   **Reason:** To centralize the game's state transition logic, making it the single source of truth for how the game state evolves.
+*   **Overall Approach:** Reference the logic patterns from the *updated* `App.tsx` harness handlers (Step 2.3) as a starting point. Adapt, expand, and refine this logic within the hook's actions to implement the full game rules, using the hook's internal state (`selectedRow`, `puzzleData`, etc.) and state setters (`setSelectedRow`, etc.). Ensure robust handling of boundaries and cell validity.
+
+---
+
+#### Step 2.4.1: Implement Movement Actions
+
+*   **Scope:** Implement `handleMoveRequest(dRow, dCol)` and `handleMoveToClueStart(direction, number)`.
+*   **Reason:** To handle state updates related to relative directional moves (arrow keys) and direct jumps (clue clicks, home/end keys potentially map here later).
+*   **Implementation:** In `useGameStateManager.ts`:
+    1.  Define `handleMoveRequest(dRow, dCol)`:
+        *   Reference `handleHarnessMoveRequest` from `App.tsx` for the basic pattern.
+        *   Get current `selectedRow`, `selectedCol`.
+        *   Calculate `targetRow`, `targetCol`.
+        *   **Full Logic:** Check target boundaries. Use `puzzleData` or a derived grid structure to check if `targetCell` is valid and usable (not a black square). If invalid, return without changing state.
+        *   Determine preferred direction based on `dRow`/`dCol`. Check if `targetCell` supports the preferred direction; if not, check the other direction. Determine the final `newDirection`.
+        *   Look up the `newNumber` for the `targetCell` based on the `newDirection`.
+        *   Update state: `setSelectedRow(targetRow)`, `setSelectedCol(targetCol)`, `setCurrentDirection(newDirection)`, `setCurrentNumber(newNumber)`.
+    2.  Define `handleMoveToClueStart(direction, number)`:
+        *   Use `puzzleData` to find the starting `row` and `col` for the given `direction` and `number`.
+        *   Update state: `setSelectedRow(row)`, `setSelectedCol(col)`, `setCurrentDirection(direction)`, `setCurrentNumber(number)`.
+*   **Test:** Logic review. Unit tests. Runtime testing via Step 2.6.
 *   **Check:**
     *   [ ] Code Completed
     *   [ ] Test Checked
 *   **Notes:**
     ```
-    Implemented state update logic within useGameStateManager actions corresponding to provider callbacks.
+    Implemented core movement logic. Harness logic adapted and expanded for boundary/validity checks and correct direction/number updates.
     ```
 
 ---
 
+#### Step 2.4.2: Implement Selection/Toggle Actions
+
+*   **Scope:** Implement `handleCellSelect(row, col)` and `handleDirectionToggle()`.
+*   **Reason:** To handle state updates when a cell is directly clicked or the direction toggle is requested (space/tab/input click).
+*   **Implementation:** In `useGameStateManager.ts`:
+    1.  Define `handleCellSelect(row, col)`:
+        *   Reference `handleHarnessCellSelect` from `App.tsx` for the basic pattern.
+        *   Get current `selectedRow`, `selectedCol`, `currentDirection`. Use `puzzleData` or derived grid to get `cellData` for the clicked `row`, `col`.
+        *   If cell is not used, return.
+        *   **Full Logic:** Implement direction switching logic (e.g., if same cell clicked, try toggling; if new cell, prefer current direction if valid, otherwise switch). Determine `newDirection`.
+        *   Look up `newNumber` based on `cellData[newDirection]`.
+        *   Update state: `setSelectedRow(row)`, `setSelectedCol(col)`, `setCurrentDirection(newDirection)`, `setCurrentNumber(newNumber)`.
+    2.  Define `handleDirectionToggle()`:
+        *   Reference `handleHarnessDirectionToggleRequest` from `App.tsx` for the basic pattern.
+        *   Get current `selectedRow`, `selectedCol`, `currentDirection`. Use `puzzleData`/grid to get `cellData`.
+        *   Determine `newDirection = otherDirection(currentDirection)`.
+        *   **Full Logic:** Check if `newDirection` is valid for the *current* cell (i.e., `cellData[newDirection]` exists).
+        *   If valid, look up `newNumber = cellData[newDirection]`. Update state: `setCurrentDirection(newDirection)`, `setCurrentNumber(newNumber)`. If invalid, do nothing.
+*   **Test:** Logic review. Unit tests. Runtime testing via Step 2.6.
+*   **Check:**
+    *   [ ] Code Completed
+    *   [ ] Test Checked
+*   **Notes:**
+    ```
+    Implemented cell selection and direction toggle logic, ensuring direction/number state is updated correctly based on cell validity and context.
+    ```
+
+---
+
+#### Step 2.4.3: Implement Input/Delete Actions
+
+*   **Scope:** Implement `handleCharacterEntered(row, col)`, `handleBackspace()`, `handleDelete()`.
+*   **Reason:** To handle state updates related to character input (including auto-move) and deletion.
+*   **Implementation:** In `useGameStateManager.ts`:
+    1.  Define `handleCharacterEntered(row, col)`:
+        *   This function is called *after* the character has been set in the provider's local grid state (via `setCellCharacter`).
+        *   **Implement Auto-Move Logic:** Get current `selectedDirection`. Calculate the `nextRow`, `nextCol` based on this direction.
+        *   Use `puzzleData`/grid to check validity/usability of the `nextCell`. (Consider rules: skip black squares? Skip already-filled/correct cells?)
+        *   If `nextCell` is valid, determine its `nextNumber` based on `currentDirection`. Update state: `setSelectedRow(nextRow)`, `setSelectedCol(nextCol)`, `setCurrentNumber(nextNumber)`. If `nextCell` is invalid, do not change position state.
+        *   *(Note: Updating the actual guess data centrally might be handled separately or as part of this action if needed in the future, but focus now is on focus/selection state).*
+    2.  Define `handleBackspace()`:
+        *   Get current `selectedRow`, `selectedCol`, `currentDirection`.
+        *   **(Optional Guess Handling):** Decide if this action should also clear the guess in the central state (if managing guesses centrally later).
+        *   **Implement Move-Backward Logic:** Calculate the `prevRow`, `prevCol` based on `currentDirection`.
+        *   Check validity/usability of `prevCell`. If valid, determine its `prevNumber` based on `currentDirection`. Update state: `setSelectedRow(prevRow)`, `setSelectedCol(prevCol)`, `setCurrentNumber(prevNumber)`. If invalid, do not change position state.
+    3.  Define `handleDelete()`:
+        *   **(Optional Guess Handling):** Decide if this action should clear the guess in the central state.
+        *   **No Movement:** This action typically does *not* change the `selectedRow`, `selectedCol`, `currentDirection`, or `currentNumber`.
+*   **Test:** Logic review. Unit tests. Runtime testing via Step 2.6 (especially auto-move and backspace).
+*   **Check:**
+    *   [ ] Code Completed
+    *   [ ] Test Checked
+*   **Notes:**
+    ```
+    Implemented character entry auto-move and backspace move-backward logic. Delete action defined (currently no state change). Central guess management deferred if necessary.
+    ```
+
+---
+
+#### Step 2.4.4: Update Hook Return Value
+
+*   **Scope:** Ensure all new action functions are returned by `useGameStateManager`.
+*   **Reason:** To make the actions available to consumers (like the `ThemedCrossword` adapter).
+*   **Implementation:** In `useGameStateManager.ts`:
+    1.  In the `return` statement of the hook, include all the newly defined action functions (`handleMoveRequest`, `handleCellSelect`, `handleDirectionToggle`, `handleCharacterEntered`, `handleBackspace`, `handleDelete`, `handleMoveToClueStart`).
+*   **Test:** Static analysis. Check consuming components in Step 2.6.
+*   **Check:**
+    *   [ ] Code Completed
+    *   [ ] Test Checked
+*   **Notes:**
+    ```
+    All state action functions are now exported from the useGameStateManager hook.
+    ```
+
+---
+
+*(Steps 2.5 through 2.8 remain unchanged from the previous update)*
+
 ### Step 2.5: Introduce `ThemedCrossword` Adapter & Cleanup Harness
 
+*   **Status:** Pending
 *   **Scope:** Create the adapter component and remove the test harness from `App.tsx`.
 *   **Reason:** Prepare for final integration using the adapter pattern and clean up temporary test code.
 *   **Implementation:**
@@ -297,60 +393,67 @@
 
 ### Step 2.6: Connect State and Callbacks via `ThemedCrossword`
 
+*   **Status:** Pending
 *   **Scope:** Wire the hook's state/actions to the refactored `CrosswordProvider` props/callbacks via the `ThemedCrossword` adapter. Implement imperative focus call.
-*   **Reason:** Establish the final two-way data flow using the central state hook and adapter.
+*   **Reason:** Establish the final two-way data flow using the central state hook and adapter. Fix the input focus issue observed during harness testing.
 *   **Implementation:** In `src/Crossword/components/ThemedCrossword.tsx`:
     1.  Receive `gameState` prop (containing state and actions).
-    2.  Create a `ref` for the `CrosswordProvider` to call its imperative `focus()` method.
+    2.  Create a `ref` for the `CrosswordProvider` to call its imperative `focus()` method. (`const crosswordProviderRef = useRef<CrosswordProviderImperative>(null);`)
     3.  Pass state values (`gameState.selectedRow`, etc.) to the corresponding props of `<CrosswordProvider>`.
-    4.  Define stable handlers (using `useCallback`) for each interaction callback prop (`onCellSelect`, `onMoveRequest`, etc.). These handlers will call the corresponding action function from `gameState` (e.g., `gameState.handleCellSelect(row, col)`). After calling the action, potentially call `crosswordProviderRef.current?.focus()`.
-    5.  Pass these handlers to the `<CrosswordProvider>` callback props.
+    4.  Define stable handlers (using `useCallback`) for each interaction callback prop (`onCellSelect`, `onMoveRequest`, `onCharacterEnteredRequest`, etc.). These handlers will:
+        *   Call the corresponding action function from `gameState` (e.g., `gameState.handleCellSelect(row, col)`).
+        *   **After** calling the action, call `crosswordProviderRef.current?.focus()` to ensure the input regains focus.
+    5.  Pass these handlers to the `<CrosswordProvider>` callback props and pass the `ref` to the provider: `<CrosswordProvider ref={crosswordProviderRef} ... >`.
 *   **Test:**
     *   Run the app.
-    *   Click cells, press arrow keys, space/tab, home/end, backspace, delete. Verify grid focus/highlight updates visually AND state updates correctly in `useGameStateManager`. Check if the grid input regains focus after interactions.
+    *   Click cells, press arrow keys, space/tab, home/end, backspace, delete, type characters.
+    *   Verify grid focus/highlight updates visually AND state updates correctly in `useGameStateManager` (use React DevTools).
+    *   Verify the grid input **regains focus immediately** after interactions (typing, clicking, arrow keys).
+    *   Verify **auto-move works correctly** after typing characters.
 *   **Check:**
     *   [ ] Code Completed
     *   [ ] Test Checked
 *   **Notes:**
     ```
-    Final wiring via adapter complete. Hook drives provider state, provider interactions update hook. Imperative focus call added.
+    Final wiring via adapter complete. Hook drives provider state, provider interactions update hook state via actions. Imperative focus call added, resolving focus issues. Auto-move after typing verified.
     ```
 
 ---
 
 ### Step 2.7: Implement & Render Basic `ClueVisualiser`
 
+*   **Status:** Pending
 *   **Scope:** Create and render the component to display the currently active clue text.
-*   **Reason:** Essential usability feedback.
+*   **Reason:** Essential usability feedback, showing the clue for the selected word.
 *   **Implementation:**
-    1.  Create `src/Crossword/components/ClueVisualiser.tsx` accepting props `direction`, `number`, `clueText`. Style it.
-    2.  In `App.tsx`: Call hook to get state (`puzzleData`, `currentDirection`, `currentNumber`). Derive `clueText`. Render `<ClueVisualiser>` in `<ClueArea>`, passing necessary props.
-*   **Test:** Click grid cells/change selection. Verify `ClueVisualiser` updates correctly based on central state (`currentDirection`, `currentNumber`).
+    1.  Create `src/Crossword/components/ClueVisualiser.tsx` accepting props `direction`, `number`, `clueText`. Style it using `styled-components`.
+    2.  In `App.tsx`: Call `useGameStateManager` to get state (`puzzleData`, `currentDirection`, `currentNumber`). Use this state to derive the `clueText` for the active clue (look up in `puzzleData.across` or `puzzleData.down` based on `currentDirection` and `currentNumber`).
+    3.  Render `<ClueVisualiser>` inside the `<ClueArea>` layout component in `App.tsx`, passing the necessary props (`currentDirection`, `currentNumber`, derived `clueText`).
+*   **Test:** Click grid cells/change selection via keyboard. Verify `ClueVisualiser` updates correctly to display the text of the currently selected clue based on the central state (`currentDirection`, `currentNumber`).
 *   **Check:**
     *   [ ] Code Completed
     *   [ ] Test Checked
 *   **Notes:**
     ```
-    Clue display implemented and rendering in layout. Driven by central state.
+    Basic clue display implemented and rendering in layout. Driven by central state from useGameStateManager.
     ```
 
 ---
 
 ### Step 2.8: Implement Clue Click -> `useGameStateManager` Update
 
-*   **Scope:** Allow clicking the clue text to update grid focus/selection state.
-*   **Reason:** Two-way navigation.
+*   **Status:** Pending
+*   **Scope:** Allow clicking the clue text in `ClueVisualiser` to update grid focus/selection state via the state manager.
+*   **Reason:** Two-way navigation between grid and clue display.
 *   **Implementation:**
-    1.  Ensure `handleMoveToClueStart(direction, number)` action exists in hook (from Step 2.4).
-    2.  Modify `ClueVisualiser` to accept and call an `onClueClick` prop (passing `direction`, `number`).
-    3.  In `App.tsx`, pass `handleMoveToClueStart` from hook to `ClueVisualiser`'s `onClueClick` prop.
-*   **Test:** Click clue text. Verify grid focus/highlight updates correctly, driven by state change in hook flowing down to `CrosswordProvider`.
+    1.  Ensure `handleMoveToClueStart(direction, number)` action exists in `useGameStateManager` (from Step 2.4). This action should update `selectedRow`, `selectedCol`, `currentDirection`, and `currentNumber` to the start of the specified clue.
+    2.  Modify `ClueVisualiser` component (`src/Crossword/components/ClueVisualiser.tsx`) to accept and call an `onClueClick` prop when the clue text is clicked, passing its `direction` and `number`. Make the clue text clickable (e.g., wrap in a button or add `onClick` to its container).
+    3.  In `App.tsx`, pass the `gameState.handleMoveToClueStart` action function (retrieved from the hook) to the `ClueVisualiser`'s `onClueClick` prop.
+*   **Test:** Click the clue text displayed in the `ClueVisualiser`. Verify the grid focus/highlight updates correctly to the start of that clue, driven by the state change in `useGameStateManager` flowing down through the adapter to `CrosswordProvider`.
 *   **Check:**
     *   [ ] Code Completed
     *   [ ] Test Checked
 *   **Notes:**
     ```
-    Clue click interaction implemented, completing two-way navigation.
+    Clue click interaction implemented, updating grid focus via useGameStateManager actions. Completes basic two-way navigation.
     ```
-
----
