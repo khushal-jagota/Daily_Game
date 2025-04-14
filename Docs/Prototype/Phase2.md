@@ -228,7 +228,6 @@
 
 ---
 
-
 ### Step 2.3: Test Refactored `CrosswordProvider` with `App.tsx` Harness
 
 *   **Scope:** Verify the refactored `CrosswordProvider` by controlling it directly from `App.tsx` using temporary local state and handlers.
@@ -283,11 +282,11 @@
         *   Update state: `setSelectedRow(row)`, `setSelectedCol(col)`, `setCurrentDirection(direction)`, `setCurrentNumber(number)`.
 *   **Test:** Logic review. Unit tests. Runtime testing via Step 2.6.
 *   **Check:**
-    *   [ ] Code Completed
-    *   [ ] Test Checked
+    *   [x] Code Completed
+    *   [x] Test Checked
 *   **Notes:**
     ```
-    Implemented core movement logic. Harness logic adapted and expanded for boundary/validity checks and correct direction/number updates.
+    Implemented core movement logic in useGameStateManager. Created gridData state to facilitate cell lookup and implemented both movement handlers with proper boundary checking, direction determination, and state updates.
     ```
 
 ---
@@ -312,11 +311,11 @@
         *   If valid, look up `newNumber = cellData[newDirection]`. Update state: `setCurrentDirection(newDirection)`, `setCurrentNumber(newNumber)`. If invalid, do nothing.
 *   **Test:** Logic review. Unit tests. Runtime testing via Step 2.6.
 *   **Check:**
-    *   [ ] Code Completed
-    *   [ ] Test Checked
+    *   [x] Code Completed
+    *   [x] Test Checked
 *   **Notes:**
     ```
-    Implemented cell selection and direction toggle logic, ensuring direction/number state is updated correctly based on cell validity and context.
+    Implemented cell selection and direction toggle logic in useGameStateManager. Both handlers properly check cell validity, handle special cases like clicking on the current cell, and ensure state updates follow the crossword logic.
     ```
 
 ---
@@ -342,14 +341,12 @@
         *   **No Movement:** This action typically does *not* change the `selectedRow`, `selectedCol`, `currentDirection`, or `currentNumber`.
 *   **Test:** Logic review. Unit tests. Runtime testing via Step 2.6 (especially auto-move and backspace).
 *   **Check:**
-    *   [ ] Code Completed
-    *   [ ] Test Checked
+    *   [x] Code Completed
+    *   [x] Test Checked
 *   **Notes:**
     ```
-    Implemented character entry auto-move and backspace move-backward logic. Delete action defined (currently no state change). Central guess management deferred if necessary.
+    Implemented character entry auto-move with proper direction handling and boundary checks. Added backspace move-backward logic with similar validations. Prepared handleDelete as a no-op for selection state (will be extended with guess clearing later).
     ```
-
----
 
 #### Step 2.4.4: Update Hook Return Value
 
@@ -359,20 +356,18 @@
     1.  In the `return` statement of the hook, include all the newly defined action functions (`handleMoveRequest`, `handleCellSelect`, `handleDirectionToggle`, `handleCharacterEntered`, `handleBackspace`, `handleDelete`, `handleMoveToClueStart`).
 *   **Test:** Static analysis. Check consuming components in Step 2.6.
 *   **Check:**
-    *   [ ] Code Completed
-    *   [ ] Test Checked
+    *   [x] Code Completed
+    *   [x] Test Checked
 *   **Notes:**
     ```
-    All state action functions are now exported from the useGameStateManager hook.
+    Confirmed all state action functions are properly exported from the useGameStateManager hook, making them available to consumer components. This completes the state action implementation for Phase 2.
     ```
 
 ---
 
-*(Steps 2.5 through 2.8 remain unchanged from the previous update)*
-
 ### Step 2.5: Introduce `ThemedCrossword` Adapter & Cleanup Harness
 
-*   **Status:** Pending
+*   **Status:** Completed
 *   **Scope:** Create the adapter component and remove the test harness from `App.tsx`.
 *   **Reason:** Prepare for final integration using the adapter pattern and clean up temporary test code.
 *   **Implementation:**
@@ -382,18 +377,18 @@
     4.  Inside `ThemedCrossword.tsx`, receive `gameState` prop. Render `<CrosswordProvider>` (passing `<CrosswordGrid />` as needed).
 *   **Test:** Grid should render. Verify harness code removed from `App.tsx`. Interaction wiring done next.
 *   **Check:**
-    *   [ ] Code Completed
-    *   [ ] Test Checked
+    *   [x] Code Completed
+    *   [x] Test Checked
 *   **Notes:**
     ```
-    Adapter component created. App.tsx cleaned up from harness code. Ready for final wiring.
+    Created ThemedCrossword adapter component with basic structure. Cleaned up App.tsx by removing all harness code and updated it to use the new adapter. The adapter properly passes selection state from gameState to CrosswordProvider (callback wiring will be done in next step).
     ```
 
 ---
 
 ### Step 2.6: Connect State and Callbacks via `ThemedCrossword`
 
-*   **Status:** Pending
+*   **Status:** Completed
 *   **Scope:** Wire the hook's state/actions to the refactored `CrosswordProvider` props/callbacks via the `ThemedCrossword` adapter. Implement imperative focus call.
 *   **Reason:** Establish the final two-way data flow using the central state hook and adapter. Fix the input focus issue observed during harness testing.
 *   **Implementation:** In `src/Crossword/components/ThemedCrossword.tsx`:
@@ -411,18 +406,18 @@
     *   Verify the grid input **regains focus immediately** after interactions (typing, clicking, arrow keys).
     *   Verify **auto-move works correctly** after typing characters.
 *   **Check:**
-    *   [ ] Code Completed
-    *   [ ] Test Checked
+    *   [x] Code Completed
+    *   [x] Test Checked
 *   **Notes:**
     ```
-    Final wiring via adapter complete. Hook drives provider state, provider interactions update hook state via actions. Imperative focus call added, resolving focus issues. Auto-move after typing verified.
+    Successfully connected gameState actions to CrosswordProvider callbacks through ThemedCrossword adapter. Added imperative focus management to ensure keyboard focus is maintained after interactions. Implemented properly typed interface for the component props. The adapter now properly converts interaction events into state updates and maintains focus throughout.
     ```
 
 ---
 
 ### Step 2.7: Implement & Render Basic `ClueVisualiser`
 
-*   **Status:** Pending
+*   **Status:** Completed
 *   **Scope:** Create and render the component to display the currently active clue text.
 *   **Reason:** Essential usability feedback, showing the clue for the selected word.
 *   **Implementation:**
@@ -431,11 +426,11 @@
     3.  Render `<ClueVisualiser>` inside the `<ClueArea>` layout component in `App.tsx`, passing the necessary props (`currentDirection`, `currentNumber`, derived `clueText`).
 *   **Test:** Click grid cells/change selection via keyboard. Verify `ClueVisualiser` updates correctly to display the text of the currently selected clue based on the central state (`currentDirection`, `currentNumber`).
 *   **Check:**
-    *   [ ] Code Completed
-    *   [ ] Test Checked
+    *   [x] Code Completed
+    *   [x] Test Checked
 *   **Notes:**
     ```
-    Basic clue display implemented and rendering in layout. Driven by central state from useGameStateManager.
+    Created ClueVisualiser component with styled container, header and text. Component displays the active clue from gameState, and correctly shows the direction, number, and clue text. App.tsx now derives the active clue text from gameState's puzzleData and current selection.
     ```
 
 ---
@@ -451,9 +446,18 @@
     3.  In `App.tsx`, pass the `gameState.handleMoveToClueStart` action function (retrieved from the hook) to the `ClueVisualiser`'s `onClueClick` prop.
 *   **Test:** Click the clue text displayed in the `ClueVisualiser`. Verify the grid focus/highlight updates correctly to the start of that clue, driven by the state change in `useGameStateManager` flowing down through the adapter to `CrosswordProvider`.
 *   **Check:**
-    *   [ ] Code Completed
-    *   [ ] Test Checked
+    *   [x] Code Completed
+    *   [x] Test Checked
 *   **Notes:**
     ```
-    Clue click interaction implemented, updating grid focus via useGameStateManager actions. Completes basic two-way navigation.
+    Working well
     ```
+
+    ### Phase 2 Conclusion & Next Steps
+
+*   **Upon Completion:** Once all steps (2.1 through 2.8) are completed and validated, Phase 2 will be considered finished. The application will have basic grid interaction, externally controlled focus/selection state managed by `useGameStateManager`, a functioning clue display, and two-way navigation.
+*   **Immediate Next Task (Pre-Phase 3):** Before proceeding with Phase 3 features (word completion status, coloring, scoring, etc.), the next critical step will be to **implement Central Guess Management**. This involves:
+    1.  Moving the `gridData` state (specifically guess data) from `CrosswordProvider` into `useGameStateManager`.
+    2.  Modifying `CrosswordProvider` props/callbacks for character input (e.g., using `onGuessAttempt(row, col, char)` instead of `onCharacterEnteredRequest`).
+    3.  Implementing a `handleGuessInput` action in `useGameStateManager` to update the central `gridData` state and handle associated focus movement.
+*   **Rationale:** Performing this refactor immediately after Phase 2 provides the optimal architectural foundation (true single source of truth) for implementing subsequent features cleanly and efficiently. **This refactor will also enable refining interaction behaviors like the two-step Backspace (delete char before moving).**
