@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { prototypePuzzle } from '../../Puzzle/data/themedPuzzles';
 import { CluesInput, Direction, GridData, CellData, UsedCellData } from '../../Crossword/types';
 import { otherDirection, createGridData } from '../../Crossword/components/CrosswordCore/util';
+import { produce } from 'immer';
 
 /**
  * Custom hook that manages the game state for the crossword puzzle
@@ -11,8 +12,8 @@ export function useGameStateManager() {
   // Initialize state with the prototype puzzle data
   const [puzzleData, setPuzzleData] = useState<CluesInput>(prototypePuzzle);
   
-  // Initialize empty object for completed words (will be used in later phases)
-  const [completedWords, setCompletedWords] = useState<Record<string, any>>({});
+  // Initialize empty Set for completed words (stub for Phase 3)
+  const [completedWords, setCompletedWords] = useState<Set<string>>(new Set());
   
   // Focus and selection state variables
   const [selectedRow, setSelectedRow] = useState<number>(0);
@@ -30,6 +31,33 @@ export function useGameStateManager() {
   const getCellData = useCallback((row: number, col: number): CellData | undefined => {
     return gridData?.[row]?.[col];
   }, [gridData]);
+  
+  /**
+   * Helper to check if a cell is editable based on completion status
+   * Uses internal completedWords state to validate editability
+   */
+  const isEditableCell = useCallback((row: number, col: number): boolean => {
+    // Get cell data
+    const cellData = getCellData(row, col);
+    if (!cellData?.used) {
+      console.log(`[isEditableCell] Cell (${row},${col}) not found or not used`);
+      return false;
+    }
+
+    // Get word IDs for this cell
+    const wordIdAcross = cellData.across ? `${cellData.across}-across` : null;
+    const wordIdDown = cellData.down ? `${cellData.down}-down` : null;
+    
+    // Check if either word is completed
+    const isCompleted = 
+      (wordIdAcross && completedWords.has(wordIdAcross)) || 
+      (wordIdDown && completedWords.has(wordIdDown));
+    
+    console.log(`[isEditableCell] Cell (${row},${col}), wordIdAcross: ${wordIdAcross}, wordIdDown: ${wordIdDown}, isCompleted: ${isCompleted}`);
+    
+    // Return false if the cell belongs to any completed word, true otherwise
+    return !isCompleted;
+  }, [getCellData, completedWords]);
   
   /**
    * Handle movement requests (e.g., from arrow keys)
@@ -165,56 +193,106 @@ export function useGameStateManager() {
   }, [getCellData, selectedRow, selectedCol, currentDirection]);
   
   /**
-   * Handle character entry auto-move (called after a character is entered)
-   * @param row - The row where the character was entered
-   * @param col - The column where the character was entered
+   * Handle guess input for a cell
+   * @param row - The row of the cell
+   * @param col - The column of the cell
+   * @param char - The character to input
    */
-  const handleCharacterEntered = useCallback((row: number, col: number) => {
-    // Calculate the next cell based on the current direction
+  const handleGuessInput = useCallback((row: number, col: number, char: string) => {
+    console.log(`[handleGuessInput] Input at (${row},${col}): "${char}"`);
+
+    // Check if the cell is editable
+    const editable = isEditableCell(row, col);
+    console.log(`[handleGuessInput] Cell is editable: ${editable}`);
+
+    // --- Step 1: Conditionally update the guess ---
+    if (editable) {
+      // Update the grid data with proper immutability using Immer
+      setGridData(produce(draft => {
+        // Ensure the cell exists and is used before attempting to update
+        if (draft[row]?.[col]?.used) {
+          console.log(`[handleGuessInput] Updating cell (${row},${col}) from "${draft[row][col].guess}" to "${char.toUpperCase()}"`);
+          // Always store uppercase guesses
+          draft[row][col].guess = char.toUpperCase();
+        } else {
+          console.warn(`[handleGuessInput] Attempted to update non-existent or unused cell (${row},${col})`);
+        }
+      }));
+    } else {
+      console.log(`[handleGuessInput] Cell (${row},${col}) is not editable. Guess not updated.`);
+    }
+
+    // --- Step 2: Always attempt to move to the next cell ---
     let nextRow = row;
     let nextCol = col;
-    
+
     if (currentDirection === 'across') {
       nextCol += 1; // Move right
     } else {
       nextRow += 1; // Move down
     }
-    
-    // Check if the next cell is valid
+    console.log(`[handleGuessInput] Calculating next cell target: (${nextRow},${nextCol}) based on direction "${currentDirection}"`);
+
+    // Check if the next cell is valid and used within the grid
     const nextCellData = getCellData(nextRow, nextCol);
-    
-    // If next cell is invalid or unused, don't move
-    if (!nextCellData?.used) {
-      return;
+
+    if (nextCellData?.used) {
+      console.log(`[handleGuessInput] Moving focus to next cell: (${nextRow},${nextCol})`);
+      // Update selection state - Assuming handleCellSelect updates row, col, and number/direction correctly
+      // If handleCellSelect doesn't handle number/direction update correctly on simple moves,
+      // you might need separate setSelectedRow/setSelectedCol calls here.
+      // Using handleCellSelect is often cleaner if it encapsulates all selection logic.
+      handleCellSelect(nextRow, nextCol);
+
+      // --- Optional Refinement: ---
+      // If handleCellSelect primarily handles clicks and doesn't perfectly replicate
+      // simple sequential movement logic (e.g., updating currentNumber implicitly),
+      // you might replace the handleCellSelect call above with direct state setters:
+      // setSelectedRow(nextRow);
+      // setSelectedCol(nextCol);
+      // // Potentially update currentNumber based on nextCellData - requires puzzleData access
+      // const nextNumber = currentDirection === 'across' ? nextCellData.across?.number : nextCellData.down?.number;
+      // if (nextNumber && nextNumber !== currentNumber) {
+      //   setCurrentNumber(nextNumber);
+      //   console.log(`[handleGuessInput] Updated current number to ${nextNumber}`);
+      // }
+      // --- End Optional Refinement ---
+
+    } else {
+      console.log(`[handleGuessInput] Next cell (${nextRow},${nextCol}) is invalid or unused. Focus not moved.`);
+      // Do not move focus if the next cell isn't part of the puzzle grid
     }
-    
-    // Determine if the next cell is part of the same word/clue number
-    let newDirection = currentDirection;
-    if (!(nextCellData as UsedCellData)[currentDirection]) {
-      // Next cell is not part of the current direction's word
-      // Try the other direction if we need to switch
-      const otherDir = otherDirection(currentDirection);
-      if ((nextCellData as UsedCellData)[otherDir]) {
-        newDirection = otherDir;
-      } else {
-        // If neither direction is valid for next cell, don't move
-        return;
-      }
-    }
-    
-    const newNumber = (nextCellData as UsedCellData)[newDirection] ?? '';
-    
-    // Update state to move to the next cell
-    setSelectedRow(nextRow);
-    setSelectedCol(nextCol);
-    setCurrentDirection(newDirection);
-    setCurrentNumber(newNumber);
-  }, [getCellData, currentDirection]);
+
+  }, [
+    isEditableCell,
+    setGridData,
+    currentDirection,
+    getCellData,
+    handleCellSelect, // Or setSelectedRow, setSelectedCol, setCurrentNumber, puzzleData if using direct setters
+    // Add other dependencies like selectedRow, selectedCol if needed by move logic helpers (if extracted)
+  ]); // Ensure all dependencies used are listed here
   
   /**
-   * Handle backspace key (move to previous cell)
+   * Handle backspace key (move to previous cell and clear current cell if editable)
    */
   const handleBackspace = useCallback(() => {
+    console.log(`[handleBackspace] Called at (${selectedRow},${selectedCol})`);
+    
+    // Check if the current cell is editable
+    const editable = isEditableCell(selectedRow, selectedCol);
+    console.log(`[handleBackspace] Cell is editable: ${editable}`);
+    
+    if (editable) {
+      // Clear the current cell's guess if editable, using proper immutability
+      setGridData(produce(draft => {
+        if (draft[selectedRow]?.[selectedCol]?.used) {
+          console.log(`[handleBackspace] Clearing cell (${selectedRow},${selectedCol}) from "${draft[selectedRow][selectedCol].guess}" to ""`);
+          draft[selectedRow][selectedCol].guess = '';
+        }
+      }));
+    }
+    
+    // Move to previous cell regardless of whether current cell was cleared
     // Calculate the previous cell based on the current direction
     let prevRow = selectedRow;
     let prevCol = selectedCol;
@@ -249,28 +327,61 @@ export function useGameStateManager() {
     
     const newNumber = (prevCellData as UsedCellData)[newDirection] ?? '';
     
+    console.log(`[handleBackspace] Moving to previous cell (${prevRow},${prevCol}), direction: ${newDirection}, number: ${newNumber}`);
+    
     // Update state to move to the previous cell
     setSelectedRow(prevRow);
     setSelectedCol(prevCol);
     setCurrentDirection(newDirection);
     setCurrentNumber(newNumber);
-  }, [getCellData, selectedRow, selectedCol, currentDirection]);
+  }, [
+    isEditableCell, 
+    getCellData, 
+    selectedRow, 
+    selectedCol, 
+    currentDirection,
+    setGridData,
+    setSelectedRow,
+    setSelectedCol,
+    setCurrentDirection,
+    setCurrentNumber
+    // Intentionally excluding completedWordIds as we now use internal state
+  ]);
   
   /**
-   * Handle delete key (no movement)
+   * Handle delete key (clear current cell if editable, no movement)
    */
   const handleDelete = useCallback(() => {
-    // Delete does not change cell selection or direction
-    // When central guess management is implemented, 
-    // this will clear the current cell's guess
+    console.log(`[handleDelete] Called at (${selectedRow},${selectedCol})`);
     
-    // For now, this is a no-op for selection state
-    return;
-  }, []);
+    // Check if the current cell is editable
+    const editable = isEditableCell(selectedRow, selectedCol);
+    console.log(`[handleDelete] Cell is editable: ${editable}`);
+    
+    if (editable) {
+      // Clear the current cell's guess if editable, using proper immutability
+      setGridData(produce(draft => {
+        if (draft[selectedRow]?.[selectedCol]?.used) {
+          console.log(`[handleDelete] Clearing cell (${selectedRow},${selectedCol}) from "${draft[selectedRow][selectedCol].guess}" to ""`);
+          draft[selectedRow][selectedCol].guess = '';
+        }
+      }));
+    }
+    
+    // Delete does not change cell selection or direction
+  }, [
+    isEditableCell,
+    selectedRow,
+    selectedCol,
+    setGridData
+    // Intentionally excluding completedWordIds as we now use internal state
+  ]);
   
   // Return state values including the new focus/selection variables and action handlers
   return {
     puzzleData,
+    gridData,
+    completedWords,
     selectedRow,
     selectedCol,
     currentDirection,
@@ -280,8 +391,9 @@ export function useGameStateManager() {
     handleMoveToClueStart,
     handleCellSelect,
     handleDirectionToggle,
-    handleCharacterEntered,
     handleBackspace,
     handleDelete,
+    handleGuessInput,
+    setCompletedWords,
   };
 } 

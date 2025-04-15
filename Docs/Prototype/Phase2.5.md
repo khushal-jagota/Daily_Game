@@ -9,21 +9,21 @@
 
 ### Step 2.5.1: Modify `useGameStateManager` - State & Helpers Verification (Add Completion Stub)
 
-*   **Status:** Pending
+*   **Status:** Completed
 *   **Scope:** Verify `gridData` state, `getCellData` helper. **Introduce internal `completedWords` state stub.** Define `isEditableCell` helper signature to use internal state.
 *   **Reason:** To ensure the foundation for central state modification is correct and prepare for centralized validation using *internal* completion state from the outset of this phase. Critical for avoiding stale state issues and aligning with Single Source of Truth principle earlier.
 *   **Implementation:** In `src/GameFlow/state/useGameStateManager.ts`:
     1.  Locate `gridData` state: `const [gridData, setGridData] = useState<GridData>(...)`. Verify initialization.
     2.  Locate `getCellData` helper. Verify it uses `gridData` state and is memoized correctly (`[gridData]` dependency).
-    3.  **Add `completedWords` State Stub:** Introduce `const [completedWords, setCompletedWords] = useState<Set<string>>(new Set());`. *(Note: This state will be properly managed in Phase 3; here it's just for the validation helper consumption).*
-    4.  Define the internal `isEditableCell` helper: `const isEditableCell = useCallback((row: number, col: number): boolean => { /* TODO: Implement in 2.5.2, read from completedWords state */ console.log('[isEditableCell] Called but not implemented'); return true; }, [getCellData, completedWords]);`. Note the signature **no longer takes `completedWordIds`**. Ensure `useCallback` dependencies include `getCellData` and `completedWords`. Add placeholder log.
+    3.  **Add `completedWords` State Stub:** Introduce `const [completedWords, setCompletedWords] = useState<Set<string>>(new Set());`.
+    4.  Define the internal `isEditableCell` helper: `const isEditableCell = useCallback((row: number, col: number): boolean => { ... }, [getCellData, completedWords]);`. Signature no longer takes `completedWordIds`. Dependencies include `getCellData` and `completedWords`. Add placeholder log.
 *   **Test:** Code review and static analysis (including ESLint hook dependency checks). Confirm structure, dependencies, new state stub, and updated helper stub signature/dependencies are correct.
 *   **Check:**
-    *   [ ] Code Reviewed
-    *   [ ] Dependency Array Verified (`getCellData`, `isEditableCell` stub)
-    *   [ ] `completedWords` State Stub Added
-    *   [ ] Validation Helper Stub Created (`isEditableCell` using internal state)
-    *   [ ] Test Checked (Static)
+    *   [x] Code Reviewed
+    *   [x] Dependency Array Verified (`getCellData`, `isEditableCell` stub)
+    *   [x] `completedWords` State Stub Added
+    *   [x] Validation Helper Stub Created (`isEditableCell` using internal state)
+    *   [x] Test Checked (Static)
 *   **Notes:**
     ```text
     Ensuring getCellData is correctly memoized is vital.
@@ -35,68 +35,45 @@
 
 ### Step 2.5.2: Implement `handleGuessInput` Action and `isEditableCell` Logic in `useGameStateManager`
 
-*   **Status:** Pending
+*   **Status:** Completed
 *   **Scope:** Implement the `isEditableCell` helper logic (reading internal state). Create the `handleGuessInput` action for character input, using the helper for validation, updating central guess state, and performing auto-move.
 *   **Reason:** To centralize the logic associated with typing a letter, combining validation (based on internal state), guess update, and focus movement using the abstracted validation helper.
 *   **Implementation:** In `src/GameFlow/state/useGameStateManager.ts`:
-    1.  **Implement `isEditableCell`:** Replace the `/* TODO */` comment. Logic should:
-        *   Get cell data using `getCellData(row, col)`. Handle non-existent cells.
-        *   Get the `across` and `down` word IDs associated with the cell (e.g., `wordIdAcross = \`${cellData.across?.number}-across\``).
-        *   Check if `completedWords.has(wordIdAcross)` or `completedWords.has(wordIdDown)`.
-        *   Return `false` if the cell belongs to any completed word, `true` otherwise.
-        *   **Add `console.log`** showing inputs (`row`, `col`), relevant word IDs checked against `completedWords` state, and the boolean result before returning.
-        *   Verify `useCallback` dependencies are `[getCellData, completedWords]`.
-    2.  **Define `handleGuessInput`:** Create the exported function `handleGuessInput(row: number, col: number, char: string)`. Note: **No `completedWordIds` argument**. Wrap its body in `useCallback`.
-    3.  **Inside `handleGuessInput`:**
-        *   **Add Logging:** Log input arguments (`row`, `col`, `char`).
-        *   **(Validation Call):** Call the internal helper: `const editable = isEditableCell(row, col);`. Log the result of `editable`. `if (!editable) { return; }`.
-        *   **Update Guess State:** Call `setGridData(produce((draft) => { ... }))`. Adapt Immer logic from `CrosswordProvider.setCellCharacter`. **Add `console.log`** confirming guess update attempt.
-        *   **Implement Auto-Move:** Copy logic from *existing* `handleCharacterEntered` action. **Strongly consider extracting auto-move calculation into a separate internal helper function** for clarity. **Add `console.log`** before calling state setters for movement.
-    4.  **Dependency Management:** Carefully define `useCallback` dependencies (include `isEditableCell`, `setGridData`, `currentDirection`, setters, potentially move calculation helper). *Do not* include arguments. Use linters and **comment intentional exclusions**.
-*   **Test:**
-    *   Logic review (especially `isEditableCell` reading state).
-    *   **Manual Dev Testing:** Use extensive `console.log` output to trace the flow, including validation checks against the (initially empty) `completedWords` state. E2E testing (Step 2.5.10) will verify against populated state.
+    1.  **Implement `isEditableCell`:** Replace `/* TODO */`. Logic checks `getCellData`, constructs `wordIdAcross`/`wordIdDown`, checks `completedWords.has()`, returns `!isCompleted`. Add logging. Verify deps `[getCellData, completedWords]`.
+    2.  **Define `handleGuessInput`:** `handleGuessInput(row, col, char)`. No `completedWordIds` arg. Wrap in `useCallback`.
+    3.  **Inside `handleGuessInput`:** Log inputs. Call `isEditableCell`. If editable, call `setGridData(produce(...))`. Implement auto-move (extracting helper encouraged). Add logs.
+    4.  **Dependency Management:** Define `useCallback` deps carefully. Comment exclusions.
+*   **Test:** Logic review. Manual Dev Testing w/ logs. E2E testing (Step 2.5.10).
 *   **Check:**
-    *   [ ] `isEditableCell` Helper Logic Implemented w/ Logging (Reads internal state)
-    *   [ ] `handleGuessInput` Code Completed w/ Logging (No `completedWordIds` arg)
-    *   [ ] Validation Call Updated in `handleGuessInput`
-    *   [ ] Auto-Move Logic Added to `handleGuessInput` (Helper encouraged)
-    *   [ ] Dependencies Verified & Commented
-    *   [ ] Test Checked (Review, Dev Logs)
+    *   [x] `isEditableCell` Helper Logic Implemented w/ Logging (Reads internal state)
+    *   [x] `handleGuessInput` Code Completed w/ Logging (No `completedWordIds` arg)
+    *   [x] Validation Call Updated in `handleGuessInput`
+    *   [x] Auto-Move Logic Added to `handleGuessInput` (Helper encouraged)
+    *   [x] Dependencies Verified & Commented
+    *   [x] Test Checked (Review, Dev Logs)
 *   **Notes:**
     ```text
     Unit tests deferred. Relying on detailed logging and E2E tests.
     Validation logic centralized in isEditableCell, now reads internal state. Dependency vigilance crucial.
-    Encourage use of internal helpers for complex parts like auto-move.
+    Encourage use of internal helpers for complex parts like auto-move. Logic for newNumber in auto-move verified correct.
     ```
 
 ---
 
 ### Step 2.5.3: Modify `handleBackspace` / `handleDelete` Actions in `useGameStateManager`
 
-*   **Status:** Pending
+*   **Status:** Completed
 *   **Scope:** Update these actions to use the central validation helper (reading internal state), modify central `gridData`, and handle focus movement (backspace).
 *   **Reason:** To ensure deletions correctly update central state, respect completion status via the central helper using internal state, and couple with movement where appropriate.
 *   **Implementation:** In `src/GameFlow/state/useGameStateManager.ts`:
-    1.  **Modify `handleBackspace`:**
-        *   Update signature: **Remove `completedWordIds` argument**.
-        *   Inside `useCallback`: **Add Logging** for context (`selectedRow`, `selectedCol`). Call `const editable = isEditableCell(selectedRow, selectedCol);`. Log `editable`. `if (!editable) { return; }`.
-        *   If editable, add `setGridData(produce(...))` call to set `guess = ''`. **Add Logging** before call.
-        *   Ensure move-backward logic remains *after* validation and clear. **Consider extracting move calculation to a helper.** **Add Logging** before calling move setters.
-        *   **Dependency Management:** Update `useCallback` deps: Add `isEditableCell`, `gridData`, `setGridData`. Verify others correct. *Do not* add arguments. Comment exclusions.
-    2.  **Modify `handleDelete`:**
-        *   Update signature: **Remove `completedWordIds` argument**.
-        *   Inside `useCallback`: **Add Logging** for context (`selectedRow`, `selectedCol`). Call `const editable = isEditableCell(selectedRow, selectedCol);`. Log `editable`. `if (!editable) { return; }`.
-        *   If editable, add `setGridData(produce(...))` call to set `guess = ''`. **Add Logging** before call.
-        *   **Dependency Management:** Update `useCallback` deps: Add `isEditableCell`, `gridData`, `setGridData`, `selectedRow`, `selectedCol`. *Do not* add arguments. Comment exclusions.
-*   **Test:**
-    *   Logic review.
-    *   **Manual Dev Testing:** Use `console.log` output to trace validation (against internal state) and state update flow for backspace/delete. E2E testing (Step 2.5.10) verifies against populated state.
+    1.  **Modify `handleBackspace`:** Remove `completedWordIds` arg. Log context. Call `isEditableCell`. If editable, call `setGridData` to clear guess. Move backward logic follows. Log updates. Update deps.
+    2.  **Modify `handleDelete`:** Remove `completedWordIds` arg. Log context. Call `isEditableCell`. If editable, call `setGridData` to clear guess. Log updates. Update deps.
+*   **Test:** Logic review. Manual Dev Testing w/ logs. E2E testing (Step 2.5.10).
 *   **Check:**
-    *   [ ] `handleBackspace` Code Completed w/ Validation & Logging (No `completedWordIds` arg)
-    *   [ ] `handleDelete` Code Completed w/ Validation & Logging (No `completedWordIds` arg)
-    *   [ ] Dependencies Verified & Commented
-    *   [ ] Test Checked (Review, Dev Logs)
+    *   [x] `handleBackspace` Code Completed w/ Validation & Logging (No `completedWordIds` arg)
+    *   [x] `handleDelete` Code Completed w/ Validation & Logging (No `completedWordIds` arg)
+    *   [x] Dependencies Verified & Commented
+    *   [x] Test Checked (Review, Dev Logs)
 *   **Notes:**
     ```text
     Unit tests deferred. Relying on detailed logging and E2E tests.
@@ -108,14 +85,14 @@
 
 ### Step 2.5.4: Remove `handleCharacterEntered` Action in `useGameStateManager`
 
-*   **Status:** Pending
+*   **Status:** Completed
 *   **Scope:** Remove the now-redundant action function from the hook.
 *   **Reason:** Its auto-move logic has been merged into `handleGuessInput`.
-*   **Implementation:** In `src/GameFlow/state/useGameStateManager.ts`: Delete the entire function definition and `useCallback` wrapper for `handleCharacterEntered`.
+*   **Implementation:** In `src/GameFlow/state/useGameStateManager.ts`: Delete the entire function definition and `useCallback` wrapper for `handleCharacterEntered`. Remove from return object.
 *   **Test:** Static analysis (`tsc`, lint). Ensure no build errors or warnings. Check Step 2.5.5 requires removal.
 *   **Check:**
-    *   [ ] Code Completed
-    *   [ ] Test Checked (Static)
+    *   [x] Code Completed
+    *   [x] Test Checked (Static)
 *   **Notes:**
     ```text
     Clean removal of obsolete action.
@@ -125,7 +102,7 @@
 
 ### Step 2.5.5: Update `useGameStateManager` Return Value
 
-*   **Status:** Pending
+*   **Status:** Completed
 *   **Scope:** Adjust the hook's return object to export the correct state and actions reflecting the changes.
 *   **Reason:** To provide the accurate public interface for consumers and allow inspection of internal state for testing/debugging.
 *   **Implementation:** In `src/GameFlow/state/useGameStateManager.ts`: In the `return { ... }` statement:
@@ -137,18 +114,19 @@
     6.  Verify all other previously exported state/actions remain.
 *   **Test:** Static analysis (`tsc`). Check adapter wiring (Step 2.5.10) relies on this updated signature (for actions) and DevTools can inspect `completedWords`.
 *   **Check:**
-    *   [ ] Code Completed (`completedWords` added to return)
-    *   [ ] Test Checked (Static)
+    *   [x] Code Completed (`completedWords` added to return)
+    *   [x] Test Checked (Static)
 *   **Notes:**
     ```text
     Hook's public contract updated. Returning completedWords stub allows test manipulation via DevTools.
+    Verified correct actions/state exported post 2.5.1-2.5.4.
     ```
 
 ---
 
 ### Step 2.5.6: Modify `CrosswordProvider` - Remove Internal State & Logic
 
-*   **Status:** Pending
+*   **Status:** Completed
 *   **Scope:** Remove the provider's local `gridData` state and internal functions (`setCellCharacter`, `isCellEditable`).
 *   **Reason:** This state, its mutation logic, and associated validation are now managed centrally by the hook.
 *   **Implementation:** In `src/Crossword/components/CrosswordCore/CrosswordProvider.tsx`:
@@ -157,18 +135,19 @@
     3.  Delete the internal `isCellEditable` function/`useCallback` wrapper.
 *   **Test:** Static analysis (`tsc`, lint). Ensure no internal references remain (build/lint errors expected if references linger).
 *   **Check:**
-    *   [ ] Code Completed
-    *   [ ] Test Checked (Static)
+    *   [x] Code Completed
+    *   [x] Test Checked (Static)
 *   **Notes:**
     ```text
     Gutting provider's obsolete internal state, mutation, and validation logic for guesses.
+    Introduces expected errors in functions that referenced deleted items (e.g., handleInputKeyDown, getCellData). These will be fixed in subsequent steps.
     ```
 
 ---
 
 ### Step 2.5.7: Modify `CrosswordProvider` - Update Props Interface
 
-*   **Status:** Pending
+*   **Status:** Completed
 *   **Scope:** Change the provider's props interface (PropTypes and TypeScript) to accept `gridData` and use the new `onGuessAttempt` input callback signature. **Remove `completedWordIds` prop.**
 *   **Reason:** Align provider's external contract: receives data display instructions, forwards interaction events. Removes dependency on completion status.
 *   **Implementation:** In `src/Crossword/components/CrosswordCore/CrosswordProvider.tsx`:
@@ -177,10 +156,10 @@
     3.  **Update Component Destructuring:** Add `gridData`, `onGuessAttempt`. Remove `onCharacterEnteredRequest`. **Remove `completedWordIds`**.
 *   **Test:** Static analysis (`tsc`). Ensure no type errors here or in adapter (Step 2.5.10).
 *   **Check:**
-    *   [ ] PropTypes Updated (Removed `completedWordIds`)
-    *   [ ] TypeScript Props Updated (Removed `completedWordIds`)
-    *   [ ] Destructuring Updated (Removed `completedWordIds`)
-    *   [ ] Test Checked (Static)
+    *   [x] PropTypes Updated (Removed `completedWordIds`)
+    *   [x] TypeScript Props Updated (Removed `completedWordIds`)
+    *   [x] Destructuring Updated (Removed `completedWordIds`)
+    *   [x] Test Checked (Static)
 *   **Notes:**
     ```text
     Adjusting the provider's "API". Explicitly removed completedWordIds prop.
@@ -190,13 +169,13 @@
 
 ### Step 2.5.8: Modify `CrosswordProvider` - Update Internal Handlers
 
-*   **Status:** Pending
-*   **Scope:** Adapt internal handlers (`handleSingleCharacter`, `handleInputKeyDown`) to use new props/callbacks, remove calls to deleted internal functions, and remove internal validation checks.
-*   **Reason:** Make provider a pure event forwarder for guess/delete actions, delegating validation and state updates entirely.
+*   **Status:** Completed
+*   **Scope:** Adapt internal handlers (`handleSingleCharacter`, `handleInputKeyDown`) to use new props/callbacks, remove calls to deleted internal functions, and remove internal validation checks. Fix dependencies.
+*   **Reason:** Make provider a pure event forwarder for guess/delete actions, delegating validation and state updates entirely. Fixes errors introduced in 2.5.6.
 *   **Implementation:** In `src/Crossword/components/CrosswordCore/CrosswordProvider.tsx`:
     1.  **Modify `handleSingleCharacter`:**
         *   Remove calls to (deleted) `setCellCharacter` and `isCellEditable`.
-        *   Replace `onCharacterEnteredRequest?.(...)` call with `onGuessAttempt?.(selectedRow, selectedCol, char.toUpperCase())`. **Ensure correct arguments are passed.**
+        *   Replace `onCharacterEnteredRequest?.(...)` call with `onGuessAttempt?.(selectedRow, selectedCol, char.toUpperCase())`. Ensure correct arguments are passed.
         *   Update `useCallback` dependencies: remove `setCellCharacter`, `isCellEditable`. Add `onGuessAttempt`, `selectedRow`, `selectedCol`.
     2.  **Modify `handleInputKeyDown`:**
         *   In `Backspace` and `Delete` cases, remove calls to (deleted) `setCellCharacter` and surrounding `if (isEditableCell(...))` check. Ensure `onBackspaceRequest?.()` / `onDeleteRequest?.()` are still called unconditionally.
@@ -204,42 +183,44 @@
     3.  Perform cleanup of unused variables/imports.
 *   **Test:** Static analysis (`tsc`, lint). Runtime validation prep for Step 2.5.10.
 *   **Check:**
-    *   [ ] `handleSingleCharacter` Updated (Calls `onGuessAttempt` correctly)
-    *   [ ] `handleInputKeyDown` Updated (Backspace/Delete unconditional forward)
-    *   [ ] Internal Validation Removed
-    *   [ ] Dependencies Verified & Commented
-    *   [ ] Test Checked (Static & Runtime Prep)
+    *   [x] `handleSingleCharacter` Updated (Calls `onGuessAttempt` correctly)
+    *   [x] `handleInputKeyDown` Updated (Backspace/Delete unconditional forward)
+    *   [x] Internal Validation Removed
+    *   [x] Dependencies Verified & Commented
+    *   [x] Test Checked (Static & Runtime Prep)
 *   **Notes:**
     ```text
-    Provider now forwards guess/delete events without internal state updates or validation. Dependency checking is key.
+    Provider now forwards guess/delete events without internal state updates or validation. Dependency checking is key. Resolved errors from 2.5.6.
     ```
 
 ---
 
-### Step 2.5.9: Modify `CrosswordProvider` - Update Context Value
+### Step 2.5.9: Modify `CrosswordProvider` - Update Context Value & `getCellData`
 
-*   **Status:** Pending
-*   **Scope:** Ensure the `CrosswordContext` provided by this component uses the `gridData` received via props.
-*   **Reason:** To ensure child components like `CrosswordGrid` receive the centrally managed guess data through context for rendering.
+*   **Status:** Completed
+*   **Scope:** Ensure the `CrosswordContext` provided by this component uses the `gridData` received via props. Update `getCellData` to read from the prop.
+*   **Reason:** To ensure child components like `CrosswordGrid` receive the centrally managed guess data through context for rendering. Fix `getCellData` logic.
 *   **Implementation:** In `src/Crossword/components/CrosswordCore/CrosswordProvider.tsx`:
-    1.  Locate `useMemo` hook defining `crosswordContext`.
-    2.  Ensure `gridData` field uses the `gridData` prop variable: `{ ..., gridData, ... }`.
-    3.  Add `gridData` prop variable to the dependency array.
+    1.  **Update `getCellData`:** Modify the function to read from the `gridData` *prop*. Update its `useCallback` dependency array to include the `gridData` prop variable.
+    2.  Locate `useMemo` hook defining `crosswordContext`.
+    3.  Ensure `gridData` field uses the `gridData` prop variable: `{ ..., gridData, ... }`.
+    4.  Add `gridData` prop variable to the context's `useMemo` dependency array.
 *   **Test:** Static analysis (`tsc`, lint). Runtime validation prep (visual check of guesses) for Step 2.5.10.
 *   **Check:**
-    *   [ ] Code Completed
-    *   [ ] Dependency Array Updated
-    *   [ ] Test Checked (Static & Runtime Prep)
+    *   [x] `getCellData` Updated (Reads prop, deps updated)
+    *   [x] Context `useMemo` Updated (Uses prop)
+    *   [x] Context Dependency Array Updated
+    *   [x] Test Checked (Static & Runtime Prep)
 *   **Notes:**
     ```text
-    Ensuring UI components consuming context get the correct, centrally-managed gridData.
+    Ensured UI components consuming context get the correct, centrally-managed gridData prop. Fixed errors in getCellData and functions calling it.
     ```
 
 ---
 
 ### Step 2.5.10: Modify `ThemedCrossword` - Update Adapter Wiring & Test
 
-*   **Status:** Pending
+*   **Status:** Completed
 *   **Scope:** Update the adapter component to pass the `gridData` prop down, wire the new/modified callbacks (without `completedWordIds`), remove props related to completion status, and perform rigorous end-to-end testing including validation against the hook's internal state.
 *   **Reason:** To complete the connection loop and validate the entire refactor, including testing the internally managed validation logic.
 *   **Implementation:** In `src/Crossword/components/ThemedCrossword.tsx`:
@@ -262,14 +243,14 @@
     *   **Focus:** Verify input focus is consistently returned after *all* interactions.
     *   **State Inspection:** Use React DevTools to monitor `useGameStateManager` state - confirm `gridData` (guesses) and selection state update centrally as expected. Confirm `completedWords` state is present (though only manipulated via DevTools in this phase).
 *   **Check:**
-    *   [ ] `gridData` Prop Passed
-    *   [ ] Callbacks Defined & Wired Correctly (No `completedWordIds` passed)
-    *   [ ] `completedWordIds` Prop Removed from Provider
-    *   [ ] Dependencies Verified & Commented
-    *   [ ] Test Checked (Runtime E2E, DevTools **manipulation for Validation**, Logs, Edge Cases)
+    *   [x] `gridData` Prop Passed
+    *   [x] Callbacks Defined & Wired Correctly (No `completedWordIds` passed)
+    *   [x] `completedWordIds` Prop Removed from Provider
+    *   [x] Dependencies Verified & Commented
+    *   [x] Test Checked (Runtime E2E, DevTools **manipulation for Validation**, Logs, Edge Cases)
 *   **Notes:**
     ```text
-    Critical integration and testing step. Validation behavior now tested by directly manipulating internal hook state via DevTools. Use console logs heavily.
+    Critical integration and testing step. Validation behavior now tested by directly manipulating internal hook state via DevTools. Use console logs heavily to verify behavior.
     ```
 
 ---
@@ -288,9 +269,9 @@
         *   Deferral of unit tests but confirmation of rigorous E2E validation strategy.
     2.  **Create a new ticket/issue** in the project backlog: "Implement Unit Tests for useGameStateManager Actions/Helpers". Assign high priority and schedule for sprint immediately following Phase 2.5 completion.
 *   **Check:**
-    *   [ ] Docs Updated
-    *   [ ] Key Architectural Decisions Documented
-    *   [ ] Unit Test Ticket Created & Prioritized
+    *   [x] Docs Updated
+    *   [x] Key Architectural Decisions Documented
+    *   [x] Unit Test Ticket Created & Prioritized
 *   **Notes:**
     ```text
     Formally close out the phase, document the refined architecture, and ensure the testing tech debt is formally tracked and scheduled.

@@ -7,7 +7,7 @@ import React, {
   useImperativeHandle,
   useMemo,
   useRef,
-  useState,
+  useState, // Keep useState for clues, focused, bulkChange, checkQueue
 } from 'react';
 import PropTypes from 'prop-types';
 
@@ -24,7 +24,7 @@ import {
   EnhancedProps,
   FocusHandler,
   GridPosition,
-  GridData,
+  GridData, // Keep GridData type
   UsedCellData,
   CellData,
   UnusedCellData,
@@ -37,7 +37,7 @@ import {
   createGridData,
   isAcross,
   loadGuesses,
-  otherDirection, // Keep otherDirection if needed by consumers via context? No, looks like internal use only which is removed. Okay to remove if truly unused later.
+  otherDirection,
   saveGuesses,
 } from './util';
 
@@ -209,8 +209,12 @@ ADDED: callback function called when a cell is selected
   onBackspaceRequest: PropTypes.func,
   /** Callback requesting delete behavior (delete char, no move). */
   onDeleteRequest: PropTypes.func,
-  /** Callback triggered after a character has been entered successfully. */
-  onCharacterEnteredRequest: PropTypes.func,
+
+  /** Callback for attempting to enter a guess at a cell position. */
+  onGuessAttempt: PropTypes.func,
+
+  /** The current grid data containing player guesses. */
+  gridData: PropTypes.array.isRequired,
 };
 
 export type CrosswordProviderProps = EnhancedProps<
@@ -234,11 +238,6 @@ export type CrosswordProviderProps = EnhancedProps<
      * provided.
      */
     storageKey?: string;
-
-    /**
-     * ADDED: Set of completed word IDs (e.g., "1-across") to block input.
-     */
-    completedWordIds?: Set<string>;
 
     /**
      * ADDED: callback function called when a cell is selected
@@ -361,8 +360,12 @@ export type CrosswordProviderProps = EnhancedProps<
     onBackspaceRequest?: () => void;
     /** Callback handler requesting delete behavior. */
     onDeleteRequest?: () => void;
-    /** Callback handler triggered after a character has been successfully entered. */
-    onCharacterEnteredRequest?: (row: number, col: number) => void;
+
+    /** Callback for attempting to enter a guess at a cell position. */
+    onGuessAttempt?: (row: number, col: number, char: string) => void;
+
+    /** The current grid data containing player guesses. */
+    gridData: GridData;
   }
 >;
 
@@ -428,7 +431,6 @@ const CrosswordProvider = React.forwardRef<
       onCellChange,
       onClueSelected,
       onCellSelect, // Already existed
-      completedWordIds, // Already existed
       useStorage = true,
       storageKey,
       children,
@@ -443,7 +445,8 @@ const CrosswordProvider = React.forwardRef<
       onMoveToRequest,
       onBackspaceRequest,
       onDeleteRequest,
-      onCharacterEnteredRequest,
+      onGuessAttempt,
+      gridData,
     },
     ref
   ) => {
@@ -475,28 +478,24 @@ const CrosswordProvider = React.forwardRef<
       [data, finalTheme.allowNonSquare]
     );
 
-    const [gridData, setGridData] = useState<GridData>([]);
-    const [clues, setClues] = useState<CluesData | undefined>();
+    // DELETED: const [gridData, setGridData] = useState<GridData>([]);
 
-    const registeredFocusHandler = useRef<FocusHandler | null>(null);
+    const [clues, setClues] = useState<CluesData | undefined>(); // Keep clues state
+    const registeredFocusHandler = useRef<FocusHandler | null>(null); // Keep focus handler ref
 
     // interactive player state
-    const [focused, setFocused] = useState(false);
-
-    // Step 2.2.2: Remove Internal State for Focus/Selection
-    // const [focusedRow, setFocusedRow] = useState(0); // REMOVED
-    // const [focusedCol, setFocusedCol] = useState(0); // REMOVED
-    // const [currentDirection, setCurrentDirection] = useState<Direction>('across'); // REMOVED
-    // const [currentNumber, setCurrentNumber] = useState('1'); // REMOVED
+    const [focused, setFocused] = useState(false); // Keep internal focused state
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [bulkChange, setBulkChange] = useState<string | null>(null); // Keep bulk change state
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [checkQueue, setCheckQueue] = useState<GridPosition[]>([]); // Keep check queue state
 
+    // Update getCellData to use gridData prop
     const getCellData = useCallback(
       (row: number, col: number): CellData => {
         if (row >= 0 && row < rows && col >= 0 && col < cols) {
+          // Reads from gridData prop now
           if (gridData && gridData[row] && gridData[row][col]) {
             return gridData[row][col];
           }
@@ -504,62 +503,14 @@ const CrosswordProvider = React.forwardRef<
         return { row, col, used: false, outOfBounds: true } as GridPosition &
           UnusedCellData;
       },
-      [cols, gridData, rows] // Dependency array OK
+      [cols, gridData, rows] // Depends on gridData prop
     );
 
-    const isCellEditable = useCallback(
-      (row: number, col: number): boolean => {
-        const cell = getCellData(row, col);
-        if (!cell.used) return false;
+    // DELETED: isCellEditable useCallback block
 
-        const acrossNum = cell.across;
-        const downNum = cell.down;
+    // DELETED: setCellCharacter useCallback block
 
-        if (acrossNum && completedWordIds?.has(`${acrossNum}-across`)) {
-          return false;
-        }
-        if (downNum && completedWordIds?.has(`${downNum}-down`)) {
-          return false;
-        }
-
-        return true;
-      },
-      [getCellData, completedWordIds] // Dependency array OK
-    );
-
-    const setCellCharacter = useCallback(
-      (row: number, col: number, char: string) => {
-        const cell = getCellData(row, col);
-
-        if (!cell.used || !isCellEditable(row, col)) {
-          return;
-        }
-
-        if (cell.guess === char) {
-          return;
-        }
-
-        setGridData(
-          produce((draft: GridData) => {
-            if (draft && draft[row] && draft[row][col]) {
-              (draft[row][col] as UsedCellData).guess = char;
-            }
-          })
-        );
-
-        setCheckQueue(
-          produce((draft: Array<{ row: number; col: number }>) => {
-            draft.push({ row, col });
-          })
-        );
-
-        if (onCellChange) {
-          onCellChange(row, col, char);
-        }
-      },
-      [getCellData, isCellEditable, onCellChange, setGridData, setCheckQueue] // Dependency array OK
-    );
-
+    // Keep notifyAnswerComplete
     const notifyAnswerComplete = useCallback(
       (
         direction: Direction,
@@ -585,9 +536,10 @@ const CrosswordProvider = React.forwardRef<
       [onAnswerComplete, onAnswerCorrect, onAnswerIncorrect, onCorrect] // Dependency array OK
     );
 
+    // Keep checkCorrectness - uses getCellData (which now reads prop)
     const checkCorrectness = useCallback(
       (row: number, col: number) => {
-        const cell = getCellData(row, col);
+        const cell = getCellData(row, col); // Uses updated getCellData
         if (!cell.used) {
           throw new Error('unexpected unused cell');
         }
@@ -610,7 +562,7 @@ const CrosswordProvider = React.forwardRef<
           let correct = true;
 
           for (let i = 0; i < info.answer.length; i++) {
-            const checkCell = getCellData(
+            const checkCell = getCellData( // Uses updated getCellData
               info.row + (across ? 0 : i),
               info.col + (across ? i : 0)
             );
@@ -645,21 +597,21 @@ const CrosswordProvider = React.forwardRef<
           }
         });
       },
-      [data, getCellData, notifyAnswerComplete, setClues] // Added setClues dependency
+      [data, getCellData, notifyAnswerComplete, setClues] // Depends on updated getCellData
     );
 
-    // useEffect for checkQueue - OK
+    // Keep useEffect for checkQueue
     useEffect(() => {
       if (checkQueue.length === 0) {
         return;
       }
       checkQueue.forEach(({ row, col }: { row: number; col: number }) =>
-        checkCorrectness(row, col)
+        checkCorrectness(row, col) // Uses updated checkCorrectness
       );
       setCheckQueue([]);
-    }, [checkQueue, checkCorrectness]);
+    }, [checkQueue, checkCorrectness]); // Depends on updated checkCorrectness
 
-    // useMemo for crosswordComplete/Correct - OK
+    // Keep useMemo for crosswordComplete/Correct
     const { crosswordComplete, crosswordCorrect } = useMemo(() => {
       const complete = !!(
         clues &&
@@ -680,7 +632,7 @@ const CrosswordProvider = React.forwardRef<
       return { crosswordComplete: complete, crosswordCorrect: correct };
     }, [clues]);
 
-    // useEffect for crossword completion callbacks - OK
+    // Keep useEffect for crossword completion callbacks
     useEffect(() => {
       if (crosswordComplete) {
         if (onCrosswordComplete) {
@@ -697,7 +649,7 @@ const CrosswordProvider = React.forwardRef<
       onCrosswordCorrect,
     ]);
 
-    // focus management - OK
+    // Keep focus management
     const focus = useCallback(() => {
       if (registeredFocusHandler.current) {
         registeredFocusHandler.current();
@@ -709,42 +661,15 @@ const CrosswordProvider = React.forwardRef<
       }
     }, [setFocused]); // setFocused is stable
 
-    // Step 2.2.8: Remove Unused Internal Code: Movement functions
-    // const moveTo = useCallback(...); // REMOVED
-    // const moveRelative = useCallback(...); // REMOVED
-    // const moveForward = useCallback(...); // REMOVED
-    // const moveBackward = useCallback(...); // REMOVED
-
-    // Step 2.2.6: Refactor `handleSingleCharacter`
+    // Keep handleSingleCharacter - updated in Step 2.5.8
     const handleSingleCharacter = useCallback(
       (char: string) => {
-        // Use props selectedRow/selectedCol
-        if (!isCellEditable(selectedRow, selectedCol)) {
-          // Parent decides if focus should move even if not editable
-          // We might still want to notify the parent?
-          // For now, just return as per plan's interpretation.
-          return;
-        }
-
-        // Set the character using props selectedRow/selectedCol
-        setCellCharacter(selectedRow, selectedCol, char.toUpperCase());
-
-        // Remove moveForward();
-
-        // Add call to the new callback prop using props selectedRow/selectedCol
-        onCharacterEnteredRequest?.(selectedRow, selectedCol);
+        onGuessAttempt?.(selectedRow, selectedCol, char.toUpperCase());
       },
-      // Update dependency array (Step 2.2.6 & 2.2.9)
-      [
-        selectedRow,
-        selectedCol,
-        isCellEditable,
-        setCellCharacter,
-        onCharacterEnteredRequest,
-      ]
+      [selectedRow, selectedCol, onGuessAttempt] // Dependencies correct
     );
 
-    // Step 2.2.5: Refactor `handleInputKeyDown`
+    // Keep handleInputKeyDown - updated in Step 2.5.8
     const handleInputKeyDown = useCallback<
       React.KeyboardEventHandler<HTMLInputElement>
     >(
@@ -758,88 +683,57 @@ const CrosswordProvider = React.forwardRef<
 
         switch (key) {
           case 'ArrowUp':
-            // Replace moveRelative with onMoveRequest
             onMoveRequest?.(-1, 0);
             break;
-
           case 'ArrowDown':
-            // Replace moveRelative with onMoveRequest
             onMoveRequest?.(1, 0);
             break;
-
           case 'ArrowLeft':
-            // Replace moveRelative with onMoveRequest
             onMoveRequest?.(0, -1);
             break;
-
           case 'ArrowRight':
-            // Replace moveRelative with onMoveRequest
             onMoveRequest?.(0, 1);
             break;
-
-          case ' ': // treat space like tab?
+          case ' ':
           case 'Tab': {
-            // Replace internal direction toggle with onDirectionToggleRequest
             onDirectionToggleRequest?.();
-            // Keep prevent default logic (especially for Space)
              if (key === ' ') {
                 preventDefault = true;
              } else {
-                // Only prevent default for Tab if the toggle *might* have occurred
-                // This is tricky without knowing if the toggle was valid.
-                // Let's preventDefault for Tab always for simplicity now, parent can refine.
                 preventDefault = true;
              }
             break;
           }
-
           case 'Backspace':
           case 'Delete': {
-            // Use props selectedRow/selectedCol
-            if (isCellEditable(selectedRow, selectedCol)) {
-              setCellCharacter(selectedRow, selectedCol, '');
-            }
+            // Forward unconditionally
             if (key === 'Backspace') {
-              // Replace moveBackward with onBackspaceRequest
               onBackspaceRequest?.();
-            } else { // Delete key
-              // Add onDeleteRequest
+            } else {
               onDeleteRequest?.();
             }
             break;
           }
-
           case 'Home':
           case 'End': {
-            // Use props currentDirection/currentNumber
             if (!data || !data[currentDirection] || !data[currentDirection][currentNumber]) break;
             const info = data[currentDirection][currentNumber];
             if (!info) break;
-
             const { answer: { length } } = info;
             let { row, col } = info;
-
             if (key === 'End') {
               const across = isAcross(currentDirection);
-              if (across) {
-                col += length - 1;
-              } else {
-                row += length - 1;
-              }
+              if (across) { col += length - 1; } else { row += length - 1; }
             }
-
-            // Replace moveTo with onMoveToRequest
             onMoveToRequest?.(row, col);
             break;
           }
-
           default:
             if (key.length !== 1 || !/^[a-zA-Z]$/.test(key)) {
               preventDefault = false;
               break;
             }
-            // Keep call to handleSingleCharacter (which is now refactored)
-            handleSingleCharacter(key);
+            handleSingleCharacter(key); // Calls updated handleSingleCharacter
             break;
         }
 
@@ -847,26 +741,21 @@ const CrosswordProvider = React.forwardRef<
           event.preventDefault();
         }
       },
-      // Update dependency array (Step 2.2.5 & 2.2.9)
+      // Dependencies correct after Step 2.5.8 changes
       [
-        handleSingleCharacter, // Refactored version
-        currentDirection, // Prop
-        getCellData,
-        selectedRow, // Prop
-        selectedCol, // Prop
-        isCellEditable,
-        setCellCharacter,
+        handleSingleCharacter,
+        currentDirection,
         data,
-        currentNumber, // Prop
-        onMoveRequest, // New callback prop
-        onDirectionToggleRequest, // New callback prop
-        onBackspaceRequest, // New callback prop
-        onDeleteRequest, // New callback prop
-        onMoveToRequest, // New callback prop
+        currentNumber,
+        onMoveRequest,
+        onDirectionToggleRequest,
+        onBackspaceRequest,
+        onDeleteRequest,
+        onMoveToRequest,
       ]
     );
 
-    // handleInputChange and related useEffect - OK (no changes needed based on plan)
+    // Keep handleInputChange and related useEffect
     const handleInputChange = useCallback<
       React.ChangeEventHandler<HTMLInputElement>
     >((event) => {
@@ -878,39 +767,36 @@ const CrosswordProvider = React.forwardRef<
       if (!bulkChange) {
         return;
       }
-      // Uses refactored handleSingleCharacter
-      handleSingleCharacter(bulkChange[0]);
+      handleSingleCharacter(bulkChange[0]); // Uses updated handleSingleCharacter
       setBulkChange(bulkChange.length === 1 ? null : bulkChange.substring(1));
-    }, [bulkChange, handleSingleCharacter]);
+    }, [bulkChange, handleSingleCharacter]); // Depends on updated handleSingleCharacter
 
-    // Step 2.2.8: Remove Unused Internal Code: Initial focus useEffect
-    // useEffect(() => { ... }, [masterClues, masterGridData, storageKey, useStorage]); // REMOVED
-
-    // useEffect for loading/initializing gridData/clues - Keep this, but remove initial focus logic
+    // Keep useEffect for loading/initializing clues & triggering checks
     useEffect(() => {
       if (!masterGridData) return;
 
-      const newGridData = masterGridData.map((row: CellData[]) =>
-        row.map((cell: CellData) => ({ ...cell }))
-      );
+      // Only copy master grid data for initial guess loading if useStorage=true
+      const newGridData = useStorage
+        ? masterGridData.map((row: CellData[]) =>
+            row.map((cell: CellData) => ({ ...cell }))
+          )
+        : undefined; // Don't create if not using storage here
 
       const newCluesData: CluesData = {
         across: masterClues.across.map((clue: ClueDataItem) => ({ ...clue })),
         down: masterClues.down.map((clue: ClueDataItem) => ({ ...clue })),
       };
 
-      if (useStorage) {
+      if (useStorage && newGridData) {
         loadGuesses(newGridData, storageKey || defaultStorageKey);
       }
 
       setClues(newCluesData);
-      setGridData(newGridData);
 
-      // Trigger correctness check after loading from storage
-      if (useStorage) {
-        // Need to check all cells potentially affected by loaded guesses
-        // A simple approach is to check one cell from each loaded clue
-        // Or check all cells that have a guess loaded.
+      // DELETED: setGridData(newGridData); // *** THIS LINE IS NOW CORRECTLY REMOVED ***
+
+      // Trigger initial correctness check based on loaded guesses if applicable
+      if (useStorage && newGridData) {
         const cellsToCheck: GridPosition[] = [];
          newGridData.forEach((row, r) => {
             row.forEach((cell, c) => {
@@ -919,77 +805,55 @@ const CrosswordProvider = React.forwardRef<
               }
             });
          });
-        // console.log("Cells to check after load:", cellsToCheck.length);
-        setCheckQueue(produce((draft) => [...cellsToCheck])); // Replace queue
+        setCheckQueue(produce((draft) => [...cellsToCheck]));
       }
+    }, [masterClues, masterGridData, storageKey, useStorage, setClues, setCheckQueue]); // Dependencies correct
 
-      // REMOVED Initial focus setting logic (was here previously)
-      // Parent component is now responsible for setting initial selectedRow/Col/Direction/Number
-
-    }, [masterClues, masterGridData, storageKey, useStorage, setClues, setGridData, setCheckQueue]); // Added setClues, setGridData, setCheckQueue
-
-    // useEffect for saving guesses - OK
+    // Update useEffect for saving guesses to use gridData prop
     useEffect(() => {
       if (!gridData || gridData.length === 0 || !useStorage) {
         return;
       }
       saveGuesses(gridData, storageKey || defaultStorageKey);
-    }, [gridData, storageKey, useStorage]);
+    }, [gridData, storageKey, useStorage]); // Depends on gridData prop
 
-    // Step 2.2.4: Refactor `handleCellClick`
+    // Keep handleCellClick
     const handleCellClick = useCallback(
       (cellData: CellData) => {
         if (cellData.used) {
           const { row, col } = cellData;
-
-          // Call the upstream handler only
           onCellSelect?.(row, col);
-
-          // REMOVED internal logic for direction switching, state updates, and focus calls
         }
       },
-      // Update dependency array (Step 2.2.4 & 2.2.9)
-      [onCellSelect, getCellData] // Only need onCellSelect and getCellData (to check cellData.used)
+      [onCellSelect, getCellData] // Depends on updated getCellData
     );
 
-    // Step 2.2.7: Refactor `handleInputClick`
+    // Keep handleInputClick
     const handleInputClick = useCallback<
       React.MouseEventHandler<HTMLInputElement>
     >(
       (event) => {
-        // Simply signal the intent to toggle direction.
         onDirectionToggleRequest?.();
       },
-      // Update dependency array (Step 2.2.7 & 2.2.9)
       [onDirectionToggleRequest]
     );
 
-    // Step 2.2.7: Refactor `handleClueSelected`
+    // Keep handleClueSelected
     const handleClueSelected = useCallback(
       (direction: Direction, number: string) => {
         const info = clues?.[direction]?.find(
           (clue: ClueDataItem) => clue.number === number
         );
-
-        if (!info) {
-          return;
-        }
-
-        // Replace moveTo with onMoveToRequest
+        if (!info) { return; }
         onMoveToRequest?.(info.row, info.col);
-
-        // REMOVED focus call
-
-        // Keep original notification
         if (onClueSelected) {
           onClueSelected(direction, number);
         }
       },
-      // Update dependency array (Step 2.2.7 & 2.2.9)
       [clues, onClueSelected, onMoveToRequest]
     );
 
-    // registerFocusHandler - OK
+    // Keep registerFocusHandler
     const registerFocusHandler = useCallback(
       (focusHandler: FocusHandler | null) => {
         registeredFocusHandler.current = focusHandler;
@@ -997,24 +861,13 @@ const CrosswordProvider = React.forwardRef<
       [] // No dependencies
     );
 
-    // imperative commands...
+    // Keep useImperativeHandle - updated in Step 2.5.8 cleanup
     useImperativeHandle(
       ref,
       () => ({
-        focus, // Keep focus command
+        focus,
         reset: () => {
-          setGridData(
-            produce((draft: GridData) => {
-              draft.forEach((rowData: CellData[]) => {
-                rowData.forEach((cellData: CellData) => {
-                  if (cellData.used) {
-                    (cellData as UsedCellData).guess = '';
-                  }
-                });
-              });
-            })
-          );
-
+          // Only update the clues state that we still manage
           setClues(
             produce((draft: CluesData | undefined) => {
               bothDirections.forEach((direction: Direction) => {
@@ -1025,27 +878,12 @@ const CrosswordProvider = React.forwardRef<
               });
             })
           );
-
           if (useStorage) {
             clearGuesses(storageKey || defaultStorageKey);
           }
-          // Parent should reset selection state if needed after calling reset
         },
         fillAllAnswers: () => {
-          setGridData(
-            produce((draft: GridData) => {
-              draft.forEach((rowData: CellData[]) => {
-                rowData.forEach((cellData: CellData) => {
-                  if (cellData.used) {
-                    (cellData as UsedCellData).guess = (
-                      cellData as UsedCellData
-                    ).answer;
-                  }
-                });
-              });
-            })
-          );
-
+          // Only update the clues state that we still manage
           setClues(
             produce((draft: CluesData | undefined) => {
               bothDirections.forEach((direction: Direction) => {
@@ -1057,24 +895,20 @@ const CrosswordProvider = React.forwardRef<
             })
           );
 
-          // Trigger correctness check after fill
-           const cellsToCheck: GridPosition[] = [];
-           gridData.forEach((row, r) => { // Use current gridData state before produce finishes? Or masterGridData? Let's use masterGridData as reference shape
-               masterGridData.forEach((masterRow, r) => {
-                 masterRow.forEach((cell, c) => {
-                     if (cell.used) {
-                         cellsToCheck.push({ row: r, col: c });
-                     }
-                 });
-               });
-           });
-           setCheckQueue(produce((draft) => [...cellsToCheck])); // Replace queue
-
+          // Trigger checks based on master data shape
+          const cellsToCheck: GridPosition[] = [];
+          masterGridData.forEach((masterRow, r) => {
+            masterRow.forEach((cell, c) => {
+              if (cell.used) {
+                cellsToCheck.push({ row: r, col: c });
+              }
+            });
+          });
+          setCheckQueue(produce((draft) => [...cellsToCheck]));
 
           if (onLoadedCorrect) {
             const loadedCorrect: AnswerTuple[] = [];
             bothDirections.forEach((direction: Direction) => {
-              // Use masterClues as the source of truth for answers
               masterClues[direction]?.forEach(({ number, answer }) => {
                 loadedCorrect.push([direction, number, answer]);
               });
@@ -1082,65 +916,55 @@ const CrosswordProvider = React.forwardRef<
             onLoadedCorrect(loadedCorrect);
           }
         },
-        isCrosswordCorrect: () => crosswordCorrect, // Keep accessor
+        isCrosswordCorrect: () => crosswordCorrect,
         setGuess: (row: number, col: number, guess: string) => {
-           // Keep imperative guess setting, respecting editability
-           if (isCellEditable(row, col)) {
-             setCellCharacter(row, col, guess.toUpperCase());
-           }
+          // Forward the intent via onGuessAttempt
+          onGuessAttempt?.(row, col, guess.toUpperCase());
         },
       }),
-      // Update dependency array (Step 2.2.9)
+      // Dependencies correct after Step 2.5.8 cleanup
       [
         crosswordCorrect,
         focus,
         onLoadedCorrect,
-        isCellEditable,
-        setCellCharacter,
+        onGuessAttempt,
         storageKey,
         useStorage,
-        setGridData, // Added
-        setClues, // Added
-        setCheckQueue, // Added for fillAllAnswers check trigger
-        masterGridData, // Added for fillAllAnswers cell iteration
-        masterClues, // Added for fillAllAnswers callback data
+        setClues,
+        setCheckQueue,
+        masterGridData,
+        masterClues,
       ]
     );
 
-    // Step 2.2.3: Modify Context Population (useMemo)
+    // Keep useMemo for crosswordContext - updated in Step 2.5.9
     const crosswordContext = useMemo<CrosswordContextType>(
       () => ({
-        // Grid data
         rows,
         cols,
-        gridData,
+        gridData, // Uses gridData prop
         clues,
-
-        // Interaction Handlers (consumers use these via context)
-        handleInputKeyDown, // Now calls external callbacks
-        handleInputChange, // Unchanged
-        handleCellClick, // Now calls external onCellSelect
-        handleInputClick, // Now calls external onDirectionToggleRequest
-        handleClueSelected, // Now calls external onMoveToRequest & onClueSelected
+        handleInputKeyDown, // Uses updated handler
+        handleInputChange,
+        handleCellClick,
+        handleInputClick,
+        handleClueSelected,
         registerFocusHandler,
-        handleSingleCharacter, // Now calls external onCharacterEnteredRequest
-
-        // State tükrözése a props-ból
-        focused, // Internal focus state of the hidden input
-        selectedPosition: { row: selectedRow, col: selectedCol }, // Use props
-        selectedDirection: currentDirection, // Use prop
-        selectedNumber: currentNumber, // Use prop
-
-        // Derived state
+        handleSingleCharacter, // Uses updated handler
+        focused,
+        selectedPosition: { row: selectedRow, col: selectedCol },
+        selectedDirection: currentDirection,
+        selectedNumber: currentNumber,
         crosswordCorrect,
       }),
-      // Update dependency array (Step 2.2.3 & 2.2.9)
+      // Dependencies correct after Step 2.5.9 update
       [
         rows, cols, gridData, clues,
-        handleInputKeyDown, handleInputChange, handleCellClick, handleInputClick, handleClueSelected, registerFocusHandler, handleSingleCharacter, // Callbacks should be stable
-        focused, // Internal state
-        selectedRow, selectedCol, currentDirection, currentNumber, // Props reflecting external state
-        crosswordCorrect, // Derived state
+        handleInputKeyDown, handleInputChange, handleCellClick, handleInputClick,
+        handleClueSelected, registerFocusHandler, handleSingleCharacter,
+        focused,
+        selectedRow, selectedCol, currentDirection, currentNumber,
+        crosswordCorrect,
       ]
     );
 
@@ -1158,5 +982,3 @@ export default CrosswordProvider;
 
 CrosswordProvider.displayName = 'CrosswordProvider';
 CrosswordProvider.propTypes = crosswordProviderPropTypes;
-
-// defaultProps removed previously, still removed.

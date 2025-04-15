@@ -3,7 +3,8 @@ import { ThemeProvider } from 'styled-components';
 import CrosswordProvider from './CrosswordCore/CrosswordProvider';
 import CrosswordGrid from './CrosswordCore/CrosswordGrid';
 import { crosswordTheme } from '../styles/CrosswordStyles';
-import { Direction } from '../types';
+import { Direction, GridData } from '../types';
+import { useGameStateManager } from '../../GameFlow/state/useGameStateManager';
 
 // Import the proper imperative handle interface
 import { CrosswordProviderImperative } from './CrosswordCore/CrosswordProvider';
@@ -13,10 +14,12 @@ interface ThemedCrosswordProps {
   gameState: {
     // State
     puzzleData: any;
+    gridData: GridData;
     selectedRow: number;
     selectedCol: number;
     currentDirection: Direction;
     currentNumber: string;
+    completedWords: Set<string>; // For debugging in DevTools
     // Action handlers
     handleCellSelect: (row: number, col: number) => void;
     handleMoveRequest: (dRow: number, dCol: number) => void;
@@ -24,7 +27,7 @@ interface ThemedCrosswordProps {
     handleMoveToClueStart: (direction: Direction, number: string) => void;
     handleBackspace: () => void;
     handleDelete: () => void;
-    handleCharacterEntered: (row: number, col: number) => void;
+    handleGuessInput: (row: number, col: number, char: string) => void;
   };
 }
 
@@ -36,43 +39,52 @@ const ThemedCrossword: React.FC<ThemedCrosswordProps> = ({ gameState }) => {
   // Create ref for CrosswordProvider to access imperative focus method
   const crosswordProviderRef = useRef<CrosswordProviderImperative>(null);
 
+  // Focus helper function
+  const focus = useCallback(() => {
+    crosswordProviderRef.current?.focus();
+  }, []);
+
   // Callback handlers that execute gameState actions and restore focus
   const handleCellSelect = useCallback((row: number, col: number) => {
     gameState.handleCellSelect(row, col);
     // Restore focus after state update
-    crosswordProviderRef.current?.focus();
-  }, [gameState]);
+    focus();
+  }, [gameState, focus]);
 
   const handleMoveRequest = useCallback((dRow: number, dCol: number) => {
     gameState.handleMoveRequest(dRow, dCol);
-    crosswordProviderRef.current?.focus();
-  }, [gameState]);
+    focus();
+  }, [gameState, focus]);
 
   const handleDirectionToggleRequest = useCallback(() => {
     gameState.handleDirectionToggle();
-    crosswordProviderRef.current?.focus();
-  }, [gameState]);
+    focus();
+  }, [gameState, focus]);
 
   const handleMoveToRequest = useCallback((row: number, col: number) => {
     // This is used when internally jumping to a cell (rather than a clue number)
     gameState.handleCellSelect(row, col);
-    crosswordProviderRef.current?.focus();
-  }, [gameState]);
+    focus();
+  }, [gameState, focus]);
 
   const handleBackspaceRequest = useCallback(() => {
+    // No need to pass completedWordIds anymore - using internal state in the hook
     gameState.handleBackspace();
-    crosswordProviderRef.current?.focus();
-  }, [gameState]);
+    focus();
+  }, [gameState, focus]);
 
   const handleDeleteRequest = useCallback(() => {
+    // No need to pass completedWordIds anymore - using internal state in the hook
     gameState.handleDelete();
-    crosswordProviderRef.current?.focus();
-  }, [gameState]);
+    focus();
+  }, [gameState, focus]);
 
-  const handleCharacterEnteredRequest = useCallback((row: number, col: number) => {
-    gameState.handleCharacterEntered(row, col);
-    crosswordProviderRef.current?.focus();
-  }, [gameState]);
+  // New handler for guess attempts
+  const handleGuessAttempt = useCallback((row: number, col: number, char: string) => {
+    // No need to pass completedWordIds anymore - using internal state in the hook
+    gameState.handleGuessInput(row, col, char);
+    focus();
+  }, [gameState, focus]);
 
   return (
     <ThemeProvider theme={crosswordTheme}>
@@ -81,6 +93,8 @@ const ThemedCrossword: React.FC<ThemedCrosswordProps> = ({ gameState }) => {
           ref={crosswordProviderRef}
           data={gameState.puzzleData}
           useStorage={false}
+          // Pass gridData from gameState (central source of truth)
+          gridData={gameState.gridData}
           // Pass selection state from gameState
           selectedRow={gameState.selectedRow}
           selectedCol={gameState.selectedCol}
@@ -93,7 +107,8 @@ const ThemedCrossword: React.FC<ThemedCrosswordProps> = ({ gameState }) => {
           onMoveToRequest={handleMoveToRequest}
           onBackspaceRequest={handleBackspaceRequest}
           onDeleteRequest={handleDeleteRequest}
-          onCharacterEnteredRequest={handleCharacterEnteredRequest}
+          // Replace onCharacterEnteredRequest with onGuessAttempt 
+          onGuessAttempt={handleGuessAttempt}
         >
           <CrosswordGrid />
         </CrosswordProvider>
