@@ -1,10 +1,10 @@
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useRef, useMemo } from 'react';
 import { ThemeProvider } from 'styled-components';
 import CrosswordProvider from './CrosswordCore/CrosswordProvider';
 import CrosswordGrid from './CrosswordCore/CrosswordGrid';
 import { crosswordTheme } from '../styles/CrosswordStyles';
 import { Direction, GridData } from '../types';
-import { useGameStateManager } from '../../GameFlow/state/useGameStateManager';
+import { getCellKey } from '../../lib/utils';
 
 // Import the proper imperative handle interface
 import { CrosswordProviderImperative } from './CrosswordCore/CrosswordProvider';
@@ -38,6 +38,63 @@ interface ThemedCrosswordProps {
 const ThemedCrossword: React.FC<ThemedCrosswordProps> = ({ gameState }) => {
   // Create ref for CrosswordProvider to access imperative focus method
   const crosswordProviderRef = useRef<CrosswordProviderImperative>(null);
+
+  // Calculate the cell completion status map based on completedWords and puzzleData
+  const cellCompletionStatus = useMemo(() => {
+    // Create a new map to store the completion status of each cell
+    const statusMap = new Map<string, { completed: boolean }>();
+    
+    // Process each completed word
+    gameState.completedWords.forEach(wordId => {
+      try {
+        // Parse the wordId to get direction and number
+        const [number, direction] = wordId.split('-');
+        if (!number || !direction) {
+          console.warn(`[cellCompletionStatus] Invalid wordId format: ${wordId}`);
+          return;
+        }
+        
+        // Look up clue geometry in puzzleData
+        const clueInfo = gameState.puzzleData[direction]?.[number];
+        if (!clueInfo) {
+          console.warn(`[cellCompletionStatus] Clue not found for ${direction} ${number}`);
+          return;
+        }
+        
+        // Calculate the cells occupied by this word
+        const { row, col, answer } = clueInfo;
+        if (!answer) {
+          console.warn(`[cellCompletionStatus] Answer not found for ${direction} ${number}`);
+          return;
+        }
+        
+        // Mark each cell in the word as completed
+        for (let i = 0; i < answer.length; i++) {
+          let r = row;
+          let c = col;
+          
+          if (direction === 'across') {
+            c += i;
+          } else if (direction === 'down') {
+            r += i;
+          } else {
+            console.warn(`[cellCompletionStatus] Invalid direction: ${direction}`);
+            return;
+          }
+          
+          // Generate cell key and mark as completed
+          const cellKey = getCellKey(r, c);
+          statusMap.set(cellKey, { completed: true });
+          console.log(`[cellCompletionStatus] Marked cell ${cellKey} as completed from ${wordId}`);
+        }
+      } catch (error) {
+        console.error(`[cellCompletionStatus] Error processing word ${wordId}:`, error);
+      }
+    });
+    
+    console.log(`[cellCompletionStatus] Created status map with ${statusMap.size} completed cells`);
+    return statusMap;
+  }, [gameState.completedWords, gameState.puzzleData]);
 
   // Focus helper function
   const focus = useCallback(() => {
@@ -100,6 +157,8 @@ const ThemedCrossword: React.FC<ThemedCrosswordProps> = ({ gameState }) => {
           selectedCol={gameState.selectedCol}
           currentDirection={gameState.currentDirection}
           currentNumber={gameState.currentNumber}
+          // Pass completion status map
+          cellCompletionStatus={cellCompletionStatus}
           // Wire up callback handlers to gameState actions
           onCellSelect={handleCellSelect}
           onMoveRequest={handleMoveRequest}

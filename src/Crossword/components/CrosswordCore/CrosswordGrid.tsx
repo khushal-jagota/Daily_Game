@@ -44,6 +44,7 @@ export default function CrosswordGrid() {
     rows,
     cols,
     gridData,
+    cellCompletionStatus,
     handleInputKeyDown,
     handleInputChange,
     handleCellClick, // The context function itself
@@ -149,6 +150,10 @@ export default function CrosswordGrid() {
                 // Determine if this cell is part of the highlighted clue based on context direction/number
                 const isHighlighted =
                   !!currentNumber && cellData[currentDirection] === currentNumber;
+                
+                // Get the cell completion status from the map
+                const cellKey = getCellKey(row, col);
+                const completionStatus = cellCompletionStatus?.get(cellKey);
                 // --- END CORRECTIONS ---
 
                 // --- TEMPORARY LOGGING (Uncomment to use) ---
@@ -167,6 +172,7 @@ export default function CrosswordGrid() {
                     cellData={cellData}
                     focus={isFocused}      // Pass calculated focus state
                     highlight={isHighlighted} // Pass calculated highlight state
+                    completionStatus={completionStatus} // Pass completion status
                     // --- CORRECTED onClick ---
                     // Wrap context handler to pass correct cellData argument
                     onClick={() => handleCellClick(cellData)}

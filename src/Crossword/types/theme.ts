@@ -76,6 +76,11 @@ export interface CrosswordTheme {
   wordCorrectColor?: string;
   
   /**
+   * Light blue background for completed words
+   */
+  completionBackground?: string;
+  
+  /**
    * Light gray background for progress bar
    */
   progressBarBackground?: string;

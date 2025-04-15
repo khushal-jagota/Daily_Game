@@ -21,6 +21,11 @@ const cellPropTypes = {
   /** whether this cell is highlighted */
   highlight: PropTypes.bool,
 
+  /** whether this cell is part of a completed word */
+  completionStatus: PropTypes.shape({
+    completed: PropTypes.bool.isRequired,
+  }),
+
   /** handler called when the cell is clicked */
   onClick: PropTypes.func,
 };
@@ -30,6 +35,8 @@ export type CellProps = EnhancedProps<
   {
     /** the data specific to this cell */
     cellData: UsedCellData;
+    /** whether this cell is part of a completed word */
+    completionStatus?: { completed: boolean };
     /** handler called when the cell is clicked */
     onClick?: (cellData: UsedCellData) => void;
   }
@@ -48,19 +55,23 @@ export default function Cell({
   onClick,
   focus,
   highlight,
+  completionStatus,
 }: CellProps) {
   const { cellSize, cellPadding, cellInner, cellHalf, fontSize } =
     useContext(CrosswordSizeContext);
+  const theme = useContext(ThemeContext) || {};
+
+  // Set fallback values for theme properties
   const {
-    // gridBackground,
-    cellBackground,
-    cellBorder,
-    textColor,
-    numberColor,
-    focusBackground,
-    highlightBackground,
+    cellBackground = '#fffaf0',
+    cellBorder = '#dde1e4',
+    textColor = '#2c3e50',
+    numberColor = '#7f8c8d', 
+    focusBackground = '#e3f2fd',
+    highlightBackground = '#f5f9ff',
+    completionBackground = '#b3e0ff',
     bookColor,
-  } = useContext(ThemeContext);
+  } = theme;
 
   const handleClick = useCallback<React.MouseEventHandler>(
     (event) => {
@@ -93,11 +104,14 @@ export default function Cell({
         width={cellInner}
         height={cellInner}
         fill={
-          focus
+          // NEW PRECEDENCE: Completion > Highlight > Focus > Default
+          completionStatus?.completed // Check completion first
+            ? completionBackground     // Use completion color if true
+            : focus                    // Else, check focus next
             ? focusBackground
-            : highlight
+            : highlight                // Else, check highlight
             ? highlightBackground
-            : cellBackground
+            : cellBackground           // Fallback to default
         }
         stroke={borderColor}
         strokeWidth={cellSize / 50}
@@ -134,6 +148,7 @@ Cell.propTypes = cellPropTypes;
 Cell.defaultProps = {
   focus: false,
   highlight: false,
+  completionStatus: { completed: false },
   onClick: null,
 };
 

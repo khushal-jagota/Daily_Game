@@ -215,6 +215,9 @@ ADDED: callback function called when a cell is selected
 
   /** The current grid data containing player guesses. */
   gridData: PropTypes.array.isRequired,
+  
+  /** Map of cell completion status for visual feedback. */
+  cellCompletionStatus: PropTypes.instanceOf(Map),
 };
 
 export type CrosswordProviderProps = EnhancedProps<
@@ -366,6 +369,9 @@ export type CrosswordProviderProps = EnhancedProps<
 
     /** The current grid data containing player guesses. */
     gridData: GridData;
+    
+    /** Map of cell completion status for visual feedback. */
+    cellCompletionStatus?: Map<string, { completed: boolean }>;
   }
 >;
 
@@ -447,6 +453,7 @@ const CrosswordProvider = React.forwardRef<
       onDeleteRequest,
       onGuessAttempt,
       gridData,
+      cellCompletionStatus,
     },
     ref
   ) => {
@@ -944,6 +951,7 @@ const CrosswordProvider = React.forwardRef<
         cols,
         gridData, // Uses gridData prop
         clues,
+        cellCompletionStatus, // Add cell completion status
         handleInputKeyDown, // Uses updated handler
         handleInputChange,
         handleCellClick,
@@ -959,7 +967,7 @@ const CrosswordProvider = React.forwardRef<
       }),
       // Dependencies correct after Step 2.5.9 update
       [
-        rows, cols, gridData, clues,
+        rows, cols, gridData, clues, cellCompletionStatus,
         handleInputKeyDown, handleInputChange, handleCellClick, handleInputClick,
         handleClueSelected, registerFocusHandler, handleSingleCharacter,
         focused,

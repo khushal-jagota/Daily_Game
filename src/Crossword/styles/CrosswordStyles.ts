@@ -20,6 +20,9 @@ export const crosswordTheme = {
   wordCorrectBackground: '#FFD700', // Bright gold background for correct words
   wordCorrectColor: '#B8860B',      // Dark gold text for correct words
   
+  // Completion styling
+  completionBackground: '#b3e0ff', // Light blue for completed words
+  
   // Progress tracking
   progressBarBackground: '#e9ecef', // Light gray background for progress bar
   progressBarFill: '#28a745',       // Green fill for progress bar

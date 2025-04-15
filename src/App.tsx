@@ -7,7 +7,6 @@ function App() {
   // Use the game state manager hook to get the state and actions
   const gameState = useGameStateManager();
   (window as any).debugGameState = gameState;
-  (window as any).debugSetCompletedWords = gameState.setCompletedWords; 
   
   // Derive the active clue text from puzzleData based on current direction and number
   const activeClueText = gameState.currentNumber && gameState.puzzleData?.[gameState.currentDirection]?.[gameState.currentNumber]?.clue || '';
