@@ -1,104 +1,146 @@
-# Prototype Implementation: Phase 3 - Completion Logic and Input Blocking
+# Prototype Implementation: Phase 3 - Centralized Completion Logic & Visuals
 
-**Goal:** Implement the logic for marking words as complete with a fixed color, passing this state down, and modifying the reused `CrosswordProvider` to block input based on this state, managed via the `useGameStateManager` hook.
+**Goal:** Implement the logic *within `useGameStateManager`* for checking word correctness based on central guess state (`gridData`), managing the `completedWords` state, and passing completion information down to `Cell` components for visual styling (fixed color). Input blocking is assumed handled by Phase 2.5 logic.
 
-**Prerequisite:** Phase 2 completed successfully. Basic grid interaction and clue display are working, coordinated by `useGameStateManager`.
+**Prerequisite:** Phase 2.5 completed successfully. `useGameStateManager` owns focus/selection state AND `gridData` (guesses). All interaction logic (input, delete, move, validation) resides within the hook.
 
 ---
 
-### Step 3.1: Implement `completeWord` in `useGameStateManager` (Fixed Color)
+### Step 3.1: Add `completedWords` State to `useGameStateManager`
 
+*   **Status:** Pending
+*   **Scope:** Add the state variable to track which words are complete and map them to their completion info (initially just a fixed color).
+*   **Reason:** To store the completion status centrally, which will drive visuals and potentially other logic later.
 *   **Implementation:** In `src/GameFlow/state/useGameStateManager.ts`:
-    *   Define a constant within the hook or globally accessible: `const FIXED_COLOR = '#DDDDDD';` (or similar visible grey/placeholder).
-    *   Retrieve the `setCompletedWords` function from the `useState` initialized in Phase 1 for `completedWords`.
-    *   Define and export an action function `completeWord(direction, number)` from the hook's return object.
-    *   Inside this `completeWord` function:
-        *   Construct the unique `wordId` string (e.g., `wordId = \`${number}-${direction}\``).
-        *   Call the `setCompletedWords` state setter function, using the functional update form to ensure immutability: `setCompletedWords(prevCompletedWords => ({ ...prevCompletedWords, [wordId]: FIXED_COLOR }));`.
-    *   Ensure the `completedWords` state value itself is also returned from the `useGameStateManager` hook.
-*   **Test:** In `App.tsx` or `ThemedCrossword.tsx`, call the `useGameStateManager` hook. Destructure both `completeWord` and `completedWords` from its return value. Temporarily add a button or `useEffect` hook to call `completeWord('across', '1')` (using a valid clue number from your test data). Check via console logs or React DevTools that the `completedWords` state object returned by the hook updates correctly, containing the new `wordId` mapped to the `FIXED_COLOR`.
+    1.  Define a constant for the color: `const FIXED_COMPLETION_COLOR = '#cccccc';` (or similar).
+    2.  Add a new state variable: `const [completedWords, setCompletedWords] = useState<Record<string, { color: string }>>({});`.
+    3.  Ensure `completedWords` is included in the object returned by the hook.
+*   **Test:** Static analysis. Verify state exists and is returned. Use React DevTools in later steps to monitor.
 *   **Check:**
     *   [ ] Code Completed
-    *   [ ] Test Checked
+    *   [ ] State Returned by Hook
+    *   [ ] Test Checked (Static)
 *   **Notes:**
-    ```
-    Adding word completion logic and state to the central hook. Using functional update for setCompletedWords ensures safe state updates based on the previous state. Ensure completedWords state is returned.
+    ```text
+    Establishing the central state store for word completion information.
     ```
 
 ---
 
-### Step 3.2: Connect `onAnswerCorrect` Callback
+### Step 3.2: Implement `checkWordCorrectness` Helper in `useGameStateManager`
 
-*   **Implementation:** In `ThemedCrossword.tsx`:
-    *   Receive the `completeWord` action function via props (originating from `useGameStateManager`).
-    *   Define a handler function `handleAnswerCorrect = (direction, number, answer) => { completeWord(direction, number); }`. To ensure this function has a stable identity across renders (important if passed as a prop to memoized components), wrap it in `useCallback`: `const handleAnswerCorrect = useCallback((direction, number, answer) => { completeWord(direction, number); }, [completeWord]);`. List `completeWord` in the dependency array.
-    *   Pass this `handleAnswerCorrect` handler down to the `<CrosswordProvider>` component. **Critically: Verify the exact prop name expected by `CrosswordProvider`** for reporting a correct answer (it might be `onCorrect`, `onAnswer`, `onWordCorrect`, etc. - check its `propTypes` or implementation around line 430 of the original code). Use that exact prop name: `<CrosswordProvider onCorrect={handleAnswerCorrect} ... />`.
-*   **Test:** Run the app. Correctly fill in a word in the grid by typing letters. Observe the console logs or use React DevTools to ensure the `handleAnswerCorrect` function in `ThemedCrossword` is called, which in turn should call the `completeWord` function provided by `useGameStateManager`. Verify that the `completedWords` state within the hook updates correctly for that specific wordId.
+*   **Status:** Pending
+*   **Scope:** Create an internal helper function within the hook to determine if a specific word is currently correct based on the central guess state.
+*   **Reason:** To encapsulate the correctness checking logic, making it reusable by actions.
+*   **Implementation:** In `src/GameFlow/state/useGameStateManager.ts`:
+    1.  Define a new internal function `checkWordCorrectness(direction: Direction, number: string): boolean`.
+    2.  Wrap it in `useCallback` with dependencies (`puzzleData`, `gridData`, `getCellData`).
+    3.  **Inside `checkWordCorrectness`:**
+        *   Look up the clue info (`row`, `col`, `answer`) from `puzzleData` using `direction` and `number`. Handle cases where the clue might not exist.
+        *   Iterate from `i = 0` to `answer.length - 1`.
+        *   For each letter index `i`, calculate the cell's `(r, c)` coordinates based on `direction`.
+        *   Use `getCellData(r, c)` to get the cell's data from the hook's `gridData` state.
+        *   Compare the `cell.guess` with the `answer[i]`.
+        *   If any cell is not used, has no guess, or the guess doesn't match the answer character, return `false` immediately.
+        *   If the loop completes without returning `false`, return `true`.
+*   **Test:** Logic review. **Unit test this helper function thoroughly** with various scenarios (correct word, incorrect word, incomplete word, empty word). Mock dependencies (`puzzleData`, `getCellData`).
 *   **Check:**
     *   [ ] Code Completed
-    *   [ ] Test Checked
+    *   [ ] Dependencies Verified (`useCallback`)
+    *   [ ] Unit Test Written & Passed
+    *   [ ] Test Checked (Review, Unit)
 *   **Notes:**
-    ```
-    Connecting the CrosswordProvider's success callback to the central state hook's action. Using useCallback ensures handler stability. Verification of the CrosswordProvider prop name is crucial.
+    ```text
+    Core logic for determining word correctness based on central state. Unit testing is important here.
     ```
 
 ---
 
-### Step 3.3: Pass Completion Color Down & Modify `Cell`
+### Step 3.3: Trigger Correctness Check & Update `completedWords` State
 
-*   **Implementation:**
-    *   **In `ThemedCrossword.tsx`:**
-        *   Receive `completedWords` and `puzzleData` via props (originating from `useGameStateManager`).
-        *   Use React's `useMemo` hook to calculate the `cellCompletionInfo` map: `const cellCompletionInfo = useMemo(() => { ... }, [completedWords, puzzleData]);`.
-        *   The calculation logic inside `useMemo` remains: Initialize an empty object `info = {}`. Iterate through `Object.entries(completedWords)`. For each `[wordId, color]`: parse the `wordId` to get `number` and `direction`. Look up the clue's `row`, `col`, and `answer` length in `puzzleData`. Loop from `0` to `answer.length - 1`. Calculate the cell coordinates `(r, c)` for each letter based on direction. Generate the key `cellKey = \`R\${r}C\${c}\``. Add the entry `info[cellKey] = { color }` to the map. Finally, return the `info` object from the `useMemo` callback.
-    *   **Modify `CrosswordProvider.tsx`:**
-        *   Add a new optional prop to its interface/PropTypes: `cellCompletionInfo?: { [key: string]: { color: string } }`.
-        *   Locate where `CrosswordProvider` creates its internal React Context value. Add the received `cellCompletionInfo` prop to this context value object so consuming components can access it.
-    *   **Modify `CrosswordGrid.tsx`:**
-        *   Use `useContext` to consume the `CrosswordContext` provided by `CrosswordProvider`.
-        *   Extract the `cellCompletionInfo` object from the context value.
-        *   Inside the loop where `<Cell>` components are rendered, generate the key for the current cell: `cellKey = \`R\${row}C\${col}\``.
-        *   Retrieve the specific completion info for this cell: `completionInfo = cellCompletionInfo?.[cellKey]`.
-        *   Pass this `completionInfo` down as a prop to the `<Cell>` component: `<Cell ... completionInfo={completionInfo} />`.
-    *   **Modify `Cell.tsx`:**
-        *   Add the optional prop to its interface/PropTypes: `completionInfo?: { color: string }`.
-        *   Locate the SVG `<rect>` element that represents the cell background.
-        *   Modify its `fill` attribute logic: Check if `props.completionInfo?.color` exists. If it does, use this color value as the `fill`. If not, fall back to the existing logic that determines the fill based on focus, highlight, or default background color. (The exact implementation depends on how `fill` is currently set - it might involve conditional logic or merging style objects).
-    *   **In `ThemedCrossword.tsx`:** Ensure you pass the calculated `cellCompletionInfo` map (from `useMemo`) as the `cellCompletionInfo` prop to `<CrosswordProvider>`.
-*   **Test:** Run the app. Complete a word correctly by typing. Verify the cells belonging only to that word visually change background color to the `FIXED_COLOR`. Click on non-completed cells, completed cells, and intersection cells. Ensure focus/highlight styles still apply correctly (they likely should visually override the completion color when active, but the completion color should be visible when the cell is not focused/highlighted).
+*   **Status:** Pending
+*   **Scope:** Modify the hook's actions (primarily `handleGuessInput`, potentially `handleBackspace`/`handleDelete`) to call `checkWordCorrectness` after the guess state changes and update `completedWords` if a word becomes correct.
+*   **Reason:** To dynamically update the completion status based on player input. Replaces the need for an external `onCorrect` callback.
+*   **Implementation:** In `src/GameFlow/state/useGameStateManager.ts`:
+    1.  **Modify `handleGuessInput`:**
+        *   *After* the `setGridData(...)` call that updates the guess, identify the word(s) the affected cell `(row, col)` belongs to (get `cellData.across`, `cellData.down`).
+        *   For each valid word ID (`number-direction`) the cell belongs to:
+            *   Call `const isCorrect = checkWordCorrectness(direction, number);`.
+            *   If `isCorrect` is true:
+                *   Construct the `wordId = \`${number}-${direction}\``.
+                *   Call `setCompletedWords(prev => ({ ...prev, [wordId]: { color: FIXED_COMPLETION_COLOR } }));`.
+    2.  **Modify `handleBackspace` / `handleDelete` (Optional but Recommended):**
+        *   *After* the `setGridData(...)` call that clears the guess, identify the word(s) the affected cell belongs to.
+        *   For each word ID:
+            *   Check if this `wordId` currently exists in the `completedWords` state.
+            *   If it does, remove it: `setCompletedWords(prev => { const newState = { ...prev }; delete newState[wordId]; return newState; });`.
+    3.  Update `useCallback` dependencies for modified actions (add `checkWordCorrectness`, `setCompletedWords`, `completedWords`).
+*   **Test:** Logic review. Add scenarios to unit tests for actions (verify `checkWordCorrectness` is called, mock `setCompletedWords` and verify it's called/not called correctly). Runtime testing via Step 3.4.
 *   **Check:**
-    *   [ ] Code Completed
-    *   [ ] Test Checked
+    *   [ ] `handleGuessInput` Modified
+    *   [ ] `handleBackspace`/`handleDelete` Modified (Optional state clearing)
+    *   [ ] Dependencies Updated
+    *   [ ] Unit Test Scenarios Added & Passed
+    *   [ ] Test Checked (Review, Unit)
 *   **Notes:**
-    ```
-    Propagating completion visual state down through context and props. `useMemo` optimizes the potentially expensive calculation. Requires careful modification of reused components (`CrosswordProvider`, `CrosswordGrid`, `Cell`) and understanding their existing styling/rendering logic.
+    ```text
+    Integrating correctness checking into the input/delete flow within the hook. Hook now determines and updates completion status internally. Handling removal from completedWords on delete/backspace is important for UX.
     ```
 
 ---
 
-### Step 3.4: Implement Input Blocking in `CrosswordProvider`
+### Step 3.4: Pass Completion Info Down & Update `Cell` Styling
 
-*   **Implementation:**
-    *   **Add Prop:** Define and add a new optional prop `completedWordIds?: Set<string>` to `CrosswordProvider.tsx`'s props interface/PropTypes. Using a `Set` allows for efficient checking (`.has()`).
-    *   **Modify Handlers:** Locate the input handling logic within `CrosswordProvider.tsx`. This is likely in functions like `handleSingleCharacter` (handling keyboard input, potentially around line 715) and/or `setCellCharacter` (a lower-level function to update cell state, potentially around line 403).
-        *   **Inside these handlers, near the beginning:** Before proceeding with updating the cell's character or guess state:
-            *   Get the target cell's coordinates (`row`, `col`).
-            *   Retrieve the cell's data, which should include which clues pass through it (e.g., `const cell = getCellData(row, col);`). Ensure this utility function or equivalent exists and provides `cell.across` and `cell.down` clue numbers.
-            *   Check if the cell is actually used in the puzzle: `if (!cell.used) return;`.
-            *   Construct the potential word IDs for this cell: `acrossId = \`${cell.across}-across\`` and `downId = \`${cell.down}-down\``.
-            *   Check if *either* of the words passing through this cell is marked as complete using the new prop: `if ( (cell.across && props.completedWordIds?.has(acrossId)) || (cell.down && props.completedWordIds?.has(downId)) ) { return; // Stop processing input for this cell }`.
-        *   **Remove Conflicting Logic:** Carefully review the existing input handling logic and **remove or disable** any *previous* mechanisms for checking correctness or blocking input that are now redundant (e.g., the old `isCorrectInAnyDirection` checks mentioned in the original plan, or other checks that might dynamically evaluate if a word is complete based on its current letters). The *only* check for blocking input on completed words should be the new `props.completedWordIds` check.
-    *   **In `ThemedCrossword.tsx`:**
-        *   Receive the `completedWords` state object via props (originating from `useGameStateManager`).
-        *   Use `useMemo` to create the `Set` of completed word IDs: `const completedWordIds = useMemo(() => new Set(Object.keys(completedWords)), [completedWords]);`. This ensures the `Set` is only recreated when `completedWords` actually changes.
-        *   Pass this `completedWordIds` `Set` down as the `completedWordIds` prop to `<CrosswordProvider>`.
-*   **Test:** Run the app. Complete a word correctly. Verify its cells change color as per Step 3.3. **Crucially, attempt to type letters into any cell belonging to the completed word.** Confirm that the input is ignored – the character should not appear in the cell, and the internal guess state of `CrosswordProvider` should not change for that cell. Focus might still move forward if `moveForward()` calls remain; this is acceptable if input itself is blocked. Test intersection cells: if a cell belongs to one completed word and one incomplete word, typing should still be blocked. Test typing in incomplete words to ensure that still works.
+*   **Status:** Pending
+*   **Scope:** Calculate and pass down visual styling information based on `completedWords` state, and modify the `Cell` component to apply the styling.
+*   **Reason:** To visually represent the completed words on the grid using the centrally managed state.
+*   **Implementation:** *(Adapts logic from original Phase 3 plan)*
+    1.  **In `ThemedCrossword.tsx` (Adapter):**
+        *   Get `completedWords` and `puzzleData` from the `gameState` prop.
+        *   Create `cellCompletionInfo` using `useMemo`: `const cellCompletionInfo = useMemo(() => { ... }, [completedWords, puzzleData]);`. Internal logic: iterate `completedWords`, look up clue geometry in `puzzleData`, map `cellKey` (e.g., `R${r}C${c}`) to `{ color }`.
+        *   Pass `cellCompletionInfo` down to `<CrosswordProvider>` as a prop.
+    2.  **Modify `CrosswordProvider.tsx`:**
+        *   Add optional prop `cellCompletionInfo?: { [key: string]: { color: string } }`.
+        *   Add `cellCompletionInfo` to the value provided by `CrosswordContext`. Update context `useMemo` dependencies.
+    3.  **Modify `CrosswordGrid.tsx`:**
+        *   Consume `cellCompletionInfo` from `CrosswordContext`.
+        *   Inside the cell rendering loop, get `completionInfo = cellCompletionInfo?.[cellKey]`.
+        *   Pass `completionInfo` prop down to `<Cell>`.
+    4.  **Modify `Cell.tsx`:**
+        *   Add optional prop `completionInfo?: { color: string }`.
+        *   In the rendering logic for the background element (e.g., SVG `<rect>`), modify the `fill` attribute logic: Prioritize `completionInfo.color` if present, otherwise fall back to `focusBackground`, `highlightBackground`, or `cellBackground`. Example: `fill = props.completionInfo?.color ?? (props.focus ? focusBg : props.highlight ? highlightBg : cellBg);`
+*   **Test:** **Runtime E2E Testing:**
+    *   Run the app. Type the final correct letter of a word.
+    *   Verify the `completedWords` state updates in the hook (DevTools).
+    *   Verify the cells belonging *only* to that word change background color to `FIXED_COMPLETION_COLOR`.
+    *   Verify focus/highlight styles still visually override the completion color when active.
+    *   Complete intersecting words; verify shared cells correctly show completion color.
+    *   Use Backspace/Delete on a completed word; verify color reverts & `completedWords` state updates (if implemented in 3.3).
+    *   Re-test input blocking (Phase 2.5 logic): ensure typing is blocked in completed cells.
 *   **Check:**
-    *   [ ] Code Completed
-    *   [ ] Test Checked
+    *   [ ] `ThemedCrossword` Updated (`useMemo`, Prop Pass)
+    *   [ ] `CrosswordProvider` Updated (Prop, Context)
+    *   [ ] `CrosswordGrid` Updated (Context Consumption, Prop Pass)
+    *   [ ] `Cell` Updated (Prop, Style Logic)
+    *   [ ] Test Checked (Runtime E2E, Visuals, Interactions)
 *   **Notes:**
+    ```text
+    Propagating completion visual state down. Requires modifying reused components. Styling logic in Cell needs careful implementation to handle precedence (completion vs focus/highlight). Testing visual state changes and interactions is key.
     ```
-    Implementing the core input blocking logic by passing a simple Set of completed IDs to the reused component. `useMemo` optimizes Set creation. Requires careful modification and cleanup of the reused component's input handlers to rely solely on this new mechanism for blocking completed words.
+
+---
+
+### Step 3.5: Update Phase Documentation
+
+*   **Status:** Pending
+*   **Scope:** Mark Phase 3 as complete, documenting the architecture.
+*   **Reason:** Record progress.
+*   **Implementation:** Update tracking documents (`Phase3.md`, etc.). Note that correctness checking and completion state are now fully centralized in `useGameStateManager`.
+*   **Check:**
+    *   [ ] Docs Updated
+*   **Notes:**
+    ```text
+    Phase 3 complete. Centralized correctness checking and completion state management achieved. Visual feedback implemented.
     ```
 
 ---
