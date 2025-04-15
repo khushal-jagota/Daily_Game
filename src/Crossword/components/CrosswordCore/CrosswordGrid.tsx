@@ -11,6 +11,7 @@ import PropTypes, { InferProps } from 'prop-types';
 import styled, { ThemeContext } from 'styled-components';
 
 import Cell from './Cell'; // Assuming Cell component is in the same directory
+import { getCellKey } from '../../../lib/utils'; // Import getCellKey utility
 
 import { CrosswordContext, CrosswordSizeContext } from './context';
 import { FocusHandler } from '../../types'; // Assuming types are in ../../types
@@ -161,8 +162,8 @@ export default function CrosswordGrid() {
                 // Render the Cell component
                 return (
                   <Cell
-                    // Using R/C index key is acceptable if gridData structure is stable
-                    key={`R${row}C${col}`}
+                    // Using standardized utility function for cell keys
+                    key={getCellKey(row, col)}
                     cellData={cellData}
                     focus={isFocused}      // Pass calculated focus state
                     highlight={isHighlighted} // Pass calculated highlight state

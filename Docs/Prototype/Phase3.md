@@ -144,3 +144,15 @@
     ```
 
 ---
+
+I am going through a refactoring process. I will provide you with the plan and the file, please look through the plan, and, begin with the first step. 
+
+# Phase 2.75: Refactor `useGameStateManager` Utilities & Standardize Cell Key
+
+*   **Goal:** Refactor internal logic within `useGameStateManager` to improve maintainability, reduce redundancy, and increase clarity by extracting reusable helper functions for movement calculation/validation and selection state updates. Standardize cell key generation by defining and applying a `getCellKey` utility. This prepares the codebase for the cleaner integration of Phase 3 logic.
+*   **Rationale:** Addresses the growing complexity of action handlers identified during Phase 2.5 review. Extracts repeated logic patterns (movement calculation, cell validation, state setting) into dedicated, testable (or at least isolated) units, making the primary action handlers easier to read and modify. Centralizes cell key format generation for consistency. Reduces risk when adding new features in Phase 3.
+*   **Testing Strategy Note:** While formal unit tests for the hook are still deferred, this refactoring might make it easier to add unit tests for the *extracted helper functions* later. This phase relies primarily on rigorous E2E regression testing (Step 2.75.3) to ensure no behavioral changes are introduced. Console logging within helpers is encouraged during development.
+*   **Version Control:** Ensure all work for Phase 2.75 is done on a dedicated feature branch off the completed Phase 2.5 branch. Commit logically after each step.
+
+
+
