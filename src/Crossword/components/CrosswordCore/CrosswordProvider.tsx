@@ -30,7 +30,6 @@ import {
   UnusedCellData,
   ClueTypeOriginal, // Import ClueTypeOriginal
 } from '../../types'; // Assuming types are in ../../types/index.ts
-import { CrosswordTheme } from '../../types/theme';
 import {
   bothDirections,
   clearGuesses,
@@ -371,7 +370,7 @@ export type CrosswordProviderProps = EnhancedProps<
     gridData: GridData;
     
     /** Map of cell completion status for visual feedback. */
-    cellCompletionStatus?: Map<string, { completed: boolean }>;
+    cellCompletionStatus?: Map<string, { completed: boolean; stage: number }>;
   }
 >;
 

@@ -24,6 +24,7 @@ const cellPropTypes = {
   /** whether this cell is part of a completed word */
   completionStatus: PropTypes.shape({
     completed: PropTypes.bool.isRequired,
+    stage: PropTypes.number,
   }),
 
   /** handler called when the cell is clicked */
@@ -36,7 +37,7 @@ export type CellProps = EnhancedProps<
     /** the data specific to this cell */
     cellData: UsedCellData;
     /** whether this cell is part of a completed word */
-    completionStatus?: { completed: boolean };
+    completionStatus?: { completed: boolean; stage: number };
     /** handler called when the cell is clicked */
     onClick?: (cellData: UsedCellData) => void;
   }
@@ -69,7 +70,11 @@ export default function Cell({
     numberColor = '#7f8c8d', 
     focusBackground = '#e3f2fd',
     highlightBackground = '#f5f9ff',
-    completionBackground = '#b3e0ff',
+    completionStage1Background = '#2196F3',
+    completionStage2Background = '#4CAF50',
+    completionStage3Background = '#FFC107',
+    completionStage4Background = '#FF9800',
+    completionStage5Background = '#F44336',
     bookColor,
   } = theme;
 
@@ -90,6 +95,43 @@ export default function Cell({
 
   const borderColor = bookColor ? `${bookColor}80` : cellBorder;
 
+  // Helper function to get background color based on stage
+  const getBackgroundColor = () => {
+    if (completionStatus?.completed) {
+      const stage = completionStatus.stage;
+      switch (stage) {
+        case 1:
+          return completionStage1Background;
+        case 2:
+          return completionStage2Background;
+        case 3:
+          return completionStage3Background;
+        case 4:
+          return completionStage4Background;
+        case 5:
+          return completionStage5Background;
+        default:
+          return completionStage1Background; // Default to stage 1 color
+      }
+    }
+    if (focus) {
+      return focusBackground;
+    }
+    if (highlight) {
+      return highlightBackground;
+    }
+    return cellBackground;
+  };
+
+  // Helper function to get text color based on completion stage
+  const getTextColor = () => {
+    if (completionStatus?.completed) {
+      // Use white text for all completion stages for better contrast
+      return '#FFFFFF';
+    }
+    return textColor;
+  };
+
   return (
     <g
       onClick={handleClick}
@@ -103,16 +145,7 @@ export default function Cell({
         y={y + cellPadding}
         width={cellInner}
         height={cellInner}
-        fill={
-          // NEW PRECEDENCE: Completion > Highlight > Focus > Default
-          completionStatus?.completed // Check completion first
-            ? completionBackground     // Use completion color if true
-            : focus                    // Else, check focus next
-            ? focusBackground
-            : highlight                // Else, check highlight
-            ? highlightBackground
-            : cellBackground           // Fallback to default
-        }
+        fill={getBackgroundColor()}
         stroke={borderColor}
         strokeWidth={cellSize / 50}
       />
@@ -132,7 +165,7 @@ export default function Cell({
         y={y + cellHalf + 1} // +1 for visual alignment?
         textAnchor="middle"
         dominantBaseline="middle"
-        style={{ fill: textColor }}
+        style={{ fill: getTextColor() }}
         className={
           answer === guess ? 'guess-text-correct' : 'guess-text-incorrect'
         }
@@ -148,7 +181,7 @@ Cell.propTypes = cellPropTypes;
 Cell.defaultProps = {
   focus: false,
   highlight: false,
-  completionStatus: { completed: false },
+  completionStatus: { completed: false, stage: 0 },
   onClick: null,
 };
 

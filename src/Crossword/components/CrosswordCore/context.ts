@@ -25,7 +25,7 @@ export interface CrosswordContextType {
   /** The across/down clues, including "correct" status. */
   clues?: CluesData;
   /** Map of cell completion status for visual feedback */
-  cellCompletionStatus?: Map<string, { completed: boolean }>;
+  cellCompletionStatus?: Map<string, { completed: boolean; stage: number }>;
 
   /** A handler for `<input>` element KeyDown events. */
   handleInputKeyDown: React.KeyboardEventHandler<HTMLInputElement>;

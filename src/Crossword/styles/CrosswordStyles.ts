@@ -26,6 +26,13 @@ export const crosswordTheme = {
   // Progress tracking
   progressBarBackground: '#e9ecef', // Light gray background for progress bar
   progressBarFill: '#28a745',       // Green fill for progress bar
+  
+  // Timer completion stage colors
+  completionStage1Background: '#2196F3', // Blue (0-30s)
+  completionStage2Background: '#4CAF50', // Green (31-70s)
+  completionStage3Background: '#FFC107', // Yellow (71-120s)
+  completionStage4Background: '#FF9800', // Orange (121-180s)
+  completionStage5Background: '#F44336', // Red (>180s)
 };
 
 // For backward compatibility

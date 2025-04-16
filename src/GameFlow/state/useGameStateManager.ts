@@ -1,8 +1,13 @@
-import { useState, useCallback, useEffect } from 'react'; // Added useEffect import
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react'; // Added useRef and useMemo imports
 import { prototypePuzzle } from '../../Puzzle/data/themedPuzzles';
 import { CluesInput, Direction, GridData, CellData, UsedCellData } from '../../Crossword/types';
 import { otherDirection, createGridData } from '../../Crossword/components/CrosswordCore/util';
 import { produce } from 'immer';
+
+// Interface for word completion data
+interface CompletionData {
+  stage: number;
+}
 
 /**
  * Custom hook that manages the game state for the crossword puzzle
@@ -11,8 +16,8 @@ export function useGameStateManager() {
   // Initialize state with the prototype puzzle data
   const [puzzleData, setPuzzleData] = useState<CluesInput>(prototypePuzzle);
 
-  // Initialize empty Set for completed words
-  const [completedWords, setCompletedWords] = useState<Set<string>>(new Set());
+  // Initialize empty Map for completed words with their stage information
+  const [completedWords, setCompletedWords] = useState<Map<string, CompletionData>>(new Map());
 
   // Focus and selection state variables
   const [selectedRow, setSelectedRow] = useState<number>(0);
@@ -25,6 +30,9 @@ export function useGameStateManager() {
     const { gridData } = createGridData(prototypePuzzle);
     return gridData;
   });
+
+  // Ref to track the current stage for the next completion check
+  const stageForNextCompletionCheckRef = useRef<number>(0);
 
   // Helper function to get cell data at a specific position
   const getCellData = useCallback((row: number, col: number): CellData | undefined => {
@@ -87,6 +95,7 @@ export function useGameStateManager() {
     const wordIdDown = usedCell.down ? `${usedCell.down}-down` : null;
 
     // Strict Locking: Cell is locked if EITHER word passing through it is complete.
+    // Use Map.has() instead of Set.has()
     const isLocked =
       (wordIdAcross && completedWords.has(wordIdAcross)) ||
       (wordIdDown && completedWords.has(wordIdDown));
@@ -139,6 +148,18 @@ export function useGameStateManager() {
     return true;
   }, [puzzleData, getCellData]);
 
+  // Calculate if the game is complete (all words completed)
+  const isGameComplete = useMemo(() => {
+    if (!puzzleData || !puzzleData.across || !puzzleData.down) {
+      return false;
+    }
+    
+    // Count total number of words in the puzzle
+    const totalWords = Object.keys(puzzleData.across).length + Object.keys(puzzleData.down).length;
+    
+    // Check if all words are completed
+    return completedWords.size === totalWords;
+  }, [puzzleData, completedWords]);
 
   // --- NEW useEffect for managing completedWords based on gridData changes ---
   useEffect(() => {
@@ -148,31 +169,64 @@ export function useGameStateManager() {
 
     console.log('[useEffect - CompletionCheck] Grid data changed, recalculating completed words.');
 
-    const newlyCompletedWords = new Set<string>();
+    // Create a new Map with placeholder stage value (0)
+    const newlyCompletedWords = new Map<string, CompletionData>();
 
     // Check all across words
     for (const number in puzzleData.across) {
       if (checkWordCorrectness('across', number)) {
-        newlyCompletedWords.add(`${number}-across`);
+        const wordId = `${number}-across`;
+        // Preserve the existing stage if the word was already completed
+        const existingData = completedWords.get(wordId);
+        if (existingData) {
+          // Word was already completed, keep its stage
+          newlyCompletedWords.set(wordId, existingData);
+        } else {
+          // Word is newly completed, use the stage from the ref
+          const stageToRecord = stageForNextCompletionCheckRef.current;
+          console.log(`[CompletionCheck] New word completed: ${wordId} with stage ${stageToRecord}`);
+          newlyCompletedWords.set(wordId, { stage: stageToRecord });
+        }
       }
     }
 
     // Check all down words
     for (const number in puzzleData.down) {
       if (checkWordCorrectness('down', number)) {
-        newlyCompletedWords.add(`${number}-down`);
+        const wordId = `${number}-down`;
+        // Preserve the existing stage if the word was already completed
+        const existingData = completedWords.get(wordId);
+        if (existingData) {
+          // Word was already completed, keep its stage
+          newlyCompletedWords.set(wordId, existingData);
+        } else {
+          // Word is newly completed, use the stage from the ref
+          const stageToRecord = stageForNextCompletionCheckRef.current;
+          console.log(`[CompletionCheck] New word completed: ${wordId} with stage ${stageToRecord}`);
+          newlyCompletedWords.set(wordId, { stage: stageToRecord });
+        }
       }
     }
 
-    // Only update state if the set has actually changed to prevent infinite loops/unnecessary renders
-    if (
-      newlyCompletedWords.size !== completedWords.size ||
-      ![...newlyCompletedWords].every(wordId => completedWords.has(wordId))
-    ) {
-      console.log('[useEffect - CompletionCheck] Completed words set changed. Updating state.', newlyCompletedWords);
+    // Only update state if the map has actually changed to prevent infinite loops/unnecessary renders
+    let mapChanged = newlyCompletedWords.size !== completedWords.size;
+    
+    if (!mapChanged) {
+      // Check if any entries differ between the maps
+      for (const [wordId, data] of newlyCompletedWords.entries()) {
+        const existingData = completedWords.get(wordId);
+        if (!existingData || existingData.stage !== data.stage) {
+          mapChanged = true;
+          break;
+        }
+      }
+    }
+
+    if (mapChanged) {
+      console.log('[useEffect - CompletionCheck] Completed words map changed. Updating state.', newlyCompletedWords);
       setCompletedWords(newlyCompletedWords);
     } else {
-      // console.log('[useEffect - CompletionCheck] Completed words set has not changed.'); // Less noisy
+      // console.log('[useEffect - CompletionCheck] Completed words map has not changed.'); // Less noisy
     }
 
   // Dependencies: Run when gridData changes, or when puzzle/check function changes.
@@ -299,10 +353,12 @@ export function useGameStateManager() {
   }, [getCellData, selectedRow, selectedCol, currentDirection, setCurrentDirection, setCurrentNumber]);
 
   /**
-   * Handle guess input for a cell (Simplified: Only updates gridData)
+   * Handle guess input for a cell - Updated to accept currentStage parameter
    */
-  const handleGuessInput = useCallback((row: number, col: number, char: string) => {
-    // console.log(`[handleGuessInput] Input at (${row},${col}): "${char}"`); // Less noisy
+  const handleGuessInput = useCallback((row: number, col: number, char: string, currentStage: number = 0) => {
+    // Store the current stage in the ref for the completion effect to use
+    stageForNextCompletionCheckRef.current = currentStage;
+    console.log(`[handleGuessInput] Input at (${row},${col}): "${char}" with stage ${currentStage}`);
 
     const editable = isEditableCell(row, col);
     // console.log(`[handleGuessInput] Cell is editable: ${editable}`); // Less noisy
@@ -431,11 +487,12 @@ export function useGameStateManager() {
   return {
     puzzleData,
     gridData,
-    completedWords, // Still return this for use in adapter/visuals
+    completedWords, // Now returns a Map<string, CompletionData> instead of Set<string>
     selectedRow,
     selectedCol,
     currentDirection,
     currentNumber,
+    isGameComplete, // Return game completion status
     // Export action handlers
     handleMoveRequest,
     handleMoveToClueStart,

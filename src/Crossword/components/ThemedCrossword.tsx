@@ -1,13 +1,16 @@
 import React, { useCallback, useRef, useMemo } from 'react';
-import { ThemeProvider } from 'styled-components';
 import CrosswordProvider from './CrosswordCore/CrosswordProvider';
 import CrosswordGrid from './CrosswordCore/CrosswordGrid';
-import { crosswordTheme } from '../styles/CrosswordStyles';
 import { Direction, GridData } from '../types';
 import { getCellKey } from '../../lib/utils';
 
 // Import the proper imperative handle interface
 import { CrosswordProviderImperative } from './CrosswordCore/CrosswordProvider';
+
+// Define the CompletionData interface
+interface CompletionData {
+  stage: number;
+}
 
 // Define the Props interface with expected gameState shape
 interface ThemedCrosswordProps {
@@ -19,7 +22,7 @@ interface ThemedCrosswordProps {
     selectedCol: number;
     currentDirection: Direction;
     currentNumber: string;
-    completedWords: Set<string>; // For debugging in DevTools
+    completedWords: Map<string, CompletionData>; // Changed from Set to Map with CompletionData
     // Action handlers
     handleCellSelect: (row: number, col: number) => void;
     handleMoveRequest: (dRow: number, dCol: number) => void;
@@ -42,10 +45,10 @@ const ThemedCrossword: React.FC<ThemedCrosswordProps> = ({ gameState }) => {
   // Calculate the cell completion status map based on completedWords and puzzleData
   const cellCompletionStatus = useMemo(() => {
     // Create a new map to store the completion status of each cell
-    const statusMap = new Map<string, { completed: boolean }>();
+    const statusMap = new Map<string, { completed: boolean; stage: number }>();
     
     // Process each completed word
-    gameState.completedWords.forEach(wordId => {
+    gameState.completedWords.forEach((completionData, wordId) => {
       try {
         // Parse the wordId to get direction and number
         const [number, direction] = wordId.split('-');
@@ -68,7 +71,7 @@ const ThemedCrossword: React.FC<ThemedCrosswordProps> = ({ gameState }) => {
           return;
         }
         
-        // Mark each cell in the word as completed
+        // Mark each cell in the word as completed with the stage information
         for (let i = 0; i < answer.length; i++) {
           let r = row;
           let c = col;
@@ -82,17 +85,15 @@ const ThemedCrossword: React.FC<ThemedCrosswordProps> = ({ gameState }) => {
             return;
           }
           
-          // Generate cell key and mark as completed
+          // Generate cell key and mark as completed with stage information
           const cellKey = getCellKey(r, c);
-          statusMap.set(cellKey, { completed: true });
-          console.log(`[cellCompletionStatus] Marked cell ${cellKey} as completed from ${wordId}`);
+          statusMap.set(cellKey, { completed: true, stage: completionData.stage });
         }
       } catch (error) {
         console.error(`[cellCompletionStatus] Error processing word ${wordId}:`, error);
       }
     });
     
-    console.log(`[cellCompletionStatus] Created status map with ${statusMap.size} completed cells`);
     return statusMap;
   }, [gameState.completedWords, gameState.puzzleData]);
 
@@ -144,35 +145,33 @@ const ThemedCrossword: React.FC<ThemedCrosswordProps> = ({ gameState }) => {
   }, [gameState, focus]);
 
   return (
-    <ThemeProvider theme={crosswordTheme}>
-      {gameState.puzzleData && (
-        <CrosswordProvider
-          ref={crosswordProviderRef}
-          data={gameState.puzzleData}
-          useStorage={false}
-          // Pass gridData from gameState (central source of truth)
-          gridData={gameState.gridData}
-          // Pass selection state from gameState
-          selectedRow={gameState.selectedRow}
-          selectedCol={gameState.selectedCol}
-          currentDirection={gameState.currentDirection}
-          currentNumber={gameState.currentNumber}
-          // Pass completion status map
-          cellCompletionStatus={cellCompletionStatus}
-          // Wire up callback handlers to gameState actions
-          onCellSelect={handleCellSelect}
-          onMoveRequest={handleMoveRequest}
-          onDirectionToggleRequest={handleDirectionToggleRequest}
-          onMoveToRequest={handleMoveToRequest}
-          onBackspaceRequest={handleBackspaceRequest}
-          onDeleteRequest={handleDeleteRequest}
-          // Replace onCharacterEnteredRequest with onGuessAttempt 
-          onGuessAttempt={handleGuessAttempt}
-        >
-          <CrosswordGrid />
-        </CrosswordProvider>
-      )}
-    </ThemeProvider>
+    gameState.puzzleData && (
+      <CrosswordProvider
+        ref={crosswordProviderRef}
+        data={gameState.puzzleData}
+        useStorage={false}
+        // Pass gridData from gameState (central source of truth)
+        gridData={gameState.gridData}
+        // Pass selection state from gameState
+        selectedRow={gameState.selectedRow}
+        selectedCol={gameState.selectedCol}
+        currentDirection={gameState.currentDirection}
+        currentNumber={gameState.currentNumber}
+        // Pass completion status map
+        cellCompletionStatus={cellCompletionStatus}
+        // Wire up callback handlers to gameState actions
+        onCellSelect={handleCellSelect}
+        onMoveRequest={handleMoveRequest}
+        onDirectionToggleRequest={handleDirectionToggleRequest}
+        onMoveToRequest={handleMoveToRequest}
+        onBackspaceRequest={handleBackspaceRequest}
+        onDeleteRequest={handleDeleteRequest}
+        // Replace onCharacterEnteredRequest with onGuessAttempt 
+        onGuessAttempt={handleGuessAttempt}
+      >
+        <CrosswordGrid />
+      </CrosswordProvider>
+    )
   );
 };
 
