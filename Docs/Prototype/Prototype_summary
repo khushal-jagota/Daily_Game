@@ -1,0 +1,107 @@
+# Project Document: Prototype Development Summary - Themed Crossword Game
+
+**Document Version:** 1.0
+**Date:** [Insert Date]
+**Author:** [Your Name/Current CTO]
+
+## 1. Introduction
+
+This document summarizes the development process, architectural evolution, key technical decisions, and final state of the themed crossword game prototype. The primary goal of the prototype phases was to validate the core technical approach, specifically the reuse of existing `CrosswordCore` components within a new architecture centered around a central state management hook (`useGameStateManager`), and to implement fundamental crossword interaction logic, including completion detection and visual feedback.
+
+## 2. Core Architecture (Established & Refined through Phases)
+
+The prototype established and validated a core architecture based on the following principles:
+
+*   **Centralized State Management:** A custom React hook, `src/GameFlow/state/useGameStateManager.ts`, serves as the single source of truth for all dynamic game state (focus, selection, guesses (`gridData`), completion status (`completedWords`)) and contains all core interaction logic (movement, input validation, deletion, correctness checking).
+*   **Controlled Component Reuse:** The existing `CrosswordCore` UI library was integrated by refactoring its `CrosswordProvider` into a fully controlled component. It receives all necessary data (`gridData`, selection state, completion status) via props and context and forwards user interaction events up via callbacks. It is stateless regarding game logic and guesses.
+*   **Adapter Pattern:** The `src/Crossword/components/ThemedCrossword.tsx` component acts as an adapter, bridging the `useGameStateManager` hook and the `CrosswordProvider`. It subscribes to the hook's state, passes derived props (like `cellCompletionStatus`) and state down to the provider, wires up the provider's callbacks to the hook's actions, and manages imperative focus.
+*   **Feature-Based Directory Structure:** Source code (`/src`) is organized by feature (e.g., `Crossword`, `GameFlow`, `Layout`, `Puzzle`) to promote modularity.
+*   **Styling:** `styled-components` is used consistently across new components and the reused `CrosswordCore`. A centralized theme object (`src/Crossword/styles/CrosswordStyles.ts`) defines visual constants, including completion colors.
+*   **Standardized Utilities:** Shared helper functions (like `getCellKey`) are placed in `/src/lib/utils.ts`.
+
+## 3. Prototype Phase Summary
+
+### Phase 1 (Implied - Initial Setup & Basic Rendering)
+
+*   **Goal:** Establish basic project structure, render the crossword grid using reused components, and set up initial layout.
+*   **Achievements:**
+    *   Basic project structure created based on feature modularity.
+    *   `Layout` module established for basic UI scaffolding.
+    *   Initial `useGameStateManager` hook created (potentially handling only focus/selection initially).
+    *   Basic rendering of the crossword grid via `CrosswordProvider` and `CrosswordGrid` using hardcoded puzzle data.
+    *   `styled-components` and theme provider setup.
+
+### Phase 2 (Refactoring & State Centralization - Combined 2.2, 2.5, 2.75)
+
+*   **Goal:** Fully centralize dynamic state and interaction logic within `useGameStateManager`, refactor `CrosswordCore` into a controlled component, and implement core interactions.
+*   **Key Achievements & Refinements:**
+    *   **`CrosswordCore` Refactoring:** `CrosswordProvider` made fully controlled, removing its internal state management for guesses and interactions.
+    *   **State Centralization:** Ownership of `gridData` (player guesses), `selectedRow`, `selectedCol`, `currentDirection`, `currentNumber` transferred entirely to `useGameStateManager`.
+    *   **Interaction Logic Centralization:** All input handlers (`handleGuessInput`, `handleBackspace`, `handleDelete`) and navigation handlers (`handleMoveRequest`, `handleCellSelect`, etc.) implemented within `useGameStateManager`.
+    *   **Adapter Implementation:** `ThemedCrossword` component created to connect the hook state/actions to the `CrosswordProvider` props/callbacks.
+    *   **`ClueVisualiser`:** Added component to display the currently active clue based on hook state.
+    *   **Helper Functions:** Internal logic within `useGameStateManager` refactored into helper functions (`calculateAndValidateTargetCell`, `updateSelectionState`, `isEditableCell` - initial version) for better organization (Phase 2.75).
+    *   **Utilities:** `getCellKey` utility created and used.
+*   **Key Decisions:** Confirmed the viability and necessity of the central hook + controlled component architecture. Validated the incremental refactoring approach.
+
+### Phase 3 (Completion Logic & Visuals - Strict Locking & useEffect Sync)
+
+*   **Goal:** Implement logic for detecting word completion, manage completion state, provide visual feedback, and enforce strict locking on completed words. Address state synchronization issues.
+*   **Key Achievements & Refinements:**
+    *   **`checkWordCorrectness`:** Helper function implemented within the hook.
+    *   **`useEffect` for State Sync:** Introduced a `useEffect` hook within `useGameStateManager` triggered by `gridData` changes. This effect now centrally calculates the `completedWords` set, ensuring correctness checks run on updated state and resolving synchronization bugs found with the previous approach.
+    *   **Interaction Handler Simplification:** Input/delete handlers (`handleGuessInput`, `handleBackspace`, `handleDelete`) simplified to only update `gridData` (if editable), deferring completion state updates to the `useEffect`.
+    *   **Strict Locking Model:** `isEditableCell` logic updated to prevent *any* edits (input or deletion) to cells belonging to *any* completed word.
+    *   **Theme Update:** Completion background color defined in `crosswordTheme`.
+    *   **`cellCompletionStatus` Map:** Calculated via `useMemo` in `ThemedCrossword` based on the `completedWords` state from the hook.
+    *   **Status Propagation:** Map passed down via `CrosswordProvider` props and context.
+    *   **Visual Feedback:** `Cell` component updated to consume status and apply the theme's `completionBackground` color.
+    *   **Styling Precedence:** Final precedence implemented in `Cell`: `Completion > Focus > Highlight > Default`.
+*   **Key Decisions:** Adopted `useEffect` for reliable completion state management. Confirmed and implemented the "Strict Locking" interaction model. Defined final styling precedence based on UX requirements.
+
+## 4. Final Prototype State (Post-Phase 3)
+
+At the conclusion of Phase 3, the prototype successfully:
+
+*   Loads and renders a crossword puzzle from hardcoded data (`themedPuzzles.ts`).
+*   Manages all player interactions (navigation, selection, input, deletion) via the central `useGameStateManager` hook.
+*   Tracks player guesses in the `gridData` state within the hook.
+*   Reliably identifies correctly completed words using `useEffect` after `gridData` updates.
+*   Maintains a `completedWords: Set<string>` state reflecting correctly solved words.
+*   Enforces a strict locking mechanism, preventing edits to completed words.
+*   Displays the active clue in the `ClueVisualiser`.
+*   Provides visual feedback for completed words by changing their background color using a theme-defined value.
+*   Applies styling precedence correctly (Completion > Focus > Highlight > Default).
+*   Utilizes a reusable, controlled `CrosswordCore` UI component library via an adapter.
+
+## 5. Key Learnings & Decisions Summary
+
+*   The central `useGameStateManager` hook combined with a controlled `CrosswordCore` via an adapter proved a viable and effective architecture for this application.
+*   Refactoring the reused `CrosswordCore` into a fully controlled component was non-trivial but absolutely essential.
+*   Managing state updates that depend on previous state updates requires careful handling of React's asynchronous nature; using `useEffect` to react to state changes (`gridData`) before calculating dependent state (`completedWords`) is the robust solution.
+*   Explicitly defining interaction rules (like the "Strict Locking" model) and styling precedence is critical for a consistent user experience.
+*   **Testing Strategy:** The heavy reliance on manual E2E testing for the complex logic within `useGameStateManager` was identified as a significant risk for future development and regression detection. Addressing this with more automated testing (e.g., unit/integration tests for the hook) is a high-priority technical debt.
+
+## 6. Next Steps / Recommendations (Post-Prototype)
+
+Following the successful completion of the prototype phase, the recommended next steps include:
+
+1.  **Structural Refactor:** Implement the planned change to use `Map<string, { stage: number }>` for tracking completion state to prepare for multi-stage coloring/timing features.
+2.  **Testing Strategy Implementation:** Prioritize developing and implementing unit/integration tests for `useGameStateManager` to mitigate regression risks.
+3.  **Address NFRs:** Begin planning and implementation for Non-Functional Requirements, especially Accessibility (A11y), Performance (test larger grids), and Responsiveness.
+4.  **Feature Development:**
+    *   Implement Timer logic and UI (`Timer` feature).
+    *   Implement Scoring logic (likely integrated into `GameFlow`).
+    *   Implement Puzzle Data Loading (`PuzzleRepository.ts` connecting to a backend, e.g., Firebase).
+    *   Implement Persistence (saving progress, potentially via Firebase).
+    *   Design and implement the Share feature (obfuscated colored grid).
+    *   Develop the Content Pipeline for creating and deploying daily puzzles.
+
+## 7. References
+
+*   Detailed Phase Plans: `Docs/Prototype/Phase1.md`, `Docs/Prototype/Phase2.md`, `Docs/Prototype/Phase3.md` (or relevant locations).
+*   Project Structure Document.
+*   Supplementary Handover Notes.
+
+---
+**End of Document**
