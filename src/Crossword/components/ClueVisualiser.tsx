@@ -4,28 +4,32 @@ import { Direction } from '../types';
 
 // Styled components
 const ClueContainer = styled.div`
-  padding: 16px;
-  background-color: #f5f5f5;
+  padding: 0.75rem 1rem;
+  background-color: transparent;
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  margin-bottom: 16px;
+  width: 100%;
   cursor: pointer;
+  text-align: left;
   
   &:hover {
-    background-color: #e8e8e8;
+    background-color: rgba(0, 0, 0, 0.03);
   }
 `;
 
 const ClueHeader = styled.div`
-  font-weight: bold;
-  margin-bottom: 8px;
-  color: #333;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+  color: ${props => props.theme.numberColor || '#666'};
   text-transform: capitalize;
+  font-family: system-ui, sans-serif;
+  font-size: 0.9rem;
 `;
 
 const ClueText = styled.div`
-  font-size: 18px;
-  color: #555;
+  font-size: 1.1rem;
+  color: ${props => props.theme.textColor || '#333'};
+  font-family: system-ui, sans-serif;
+  line-height: 1.4;
 `;
 
 // Props interface

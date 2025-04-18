@@ -1,0 +1,125 @@
+# Phase 4.75 Conceptual Planning: Knowledge Acquisition
+
+This document outlines questions needed to understand the current layout and styling context before defining the conceptual plan for Phase 4.75: Styling & Layout Refinement.
+
+---
+
+## Current Layout & Styling Context
+
+1.  **`AppWrapper` Styles:**
+    *   **Question:** Could you share the current CSS applied to the main `AppWrapper` component (likely in `src/Layout/components.ts`)? Specifically, does it already use `display: flex`, `flex-direction: column`, `height: 100vh`, `width: 100vw`, `box-sizing: border-box`? Any existing `padding`?
+    *   **Rationale:** Need to know the starting point for implementing the full viewport foundation suggested in point #1 of the best practices.
+    *   **Answer:**
+        ```css
+        /* AppWrapper CSS rules */
+        export const AppWrapper = styled.div`
+          display: flex;
+          flex-direction: column;
+          height: 100vh;
+          overflow: hidden;
+        `;
+        ```
+
+2.  **Layout Children Sizing:**
+    *   **Question:** How are the direct children of `AppWrapper` (like `Banner`, the `TimerBarContainer`, `CrosswordArea`, `ClueArea`, `KeyboardArea`) currently sized vertically? Do any use `flex-grow`, `flex-shrink`, or fixed heights? Is there any `overflow` handling?
+    *   **Rationale:** Understanding how vertical space is currently distributed helps plan how to apply `flex-grow: 1` to the main content areas and `flex-shrink: 0` to fixed-height elements like the header/timer row.
+    *   **Answer:**
+        ```
+        /* Vertical sizing rules/styles for AppWrapper children */
+        
+        Banner: height: 50px; background-color: #CCC; flex-shrink: 0;
+        
+        TimerBarContainer: display: flex; align-items: center; gap: 8px; justify-content: center; margin: 8px 0; width: 100%; (no explicit height/flex)
+        
+        CrosswordArea: flex-grow: 1; display: flex; justify-content: center; align-items: center; padding: 10px; overflow: hidden;
+        
+        ClueArea: height: 70px; background-color: #DDD; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+        
+        KeyboardArea: height: 200px; background-color: #EEE; flex-shrink: 0;
+        ```
+
+3.  **Theme Colors & Fonts:**
+    *   **Question:** Looking at `src/Crossword/styles/CrosswordStyles.ts`, what are the current theme values for primary background (`theme.colors.background`?), primary text (`theme.colors.text`?), and is there a defined monospace font stack (`theme.fonts.monospace`?)? What's the base font size applied (e.g., on `html` or `body`)?
+    *   **Rationale:** Need to know which theme variables to use for the updated Timer text color, the Bar container background, and the Timer's `font-family` to ensure consistency. Knowing the base font size helps when setting `rem` values.
+    *   **Answer:**
+        ```
+        /* Theme values */
+        
+        The theme is defined in crosswordTheme object in src/Crossword/styles/CrosswordStyles.ts:
+        
+        // Core theme properties relevant to the question:
+        gridBackground: '#fffaf0'
+        cellBackground: '#fffaf0'
+        cellBorder: '#dde1e4'
+        textColor: '#2c3e50'
+        
+        // Progress tracking properties:
+        progressBarBackground: '#e9ecef'
+        progressBarFill: '#28a745'
+        
+        // Timer stage colors:
+        completionStage1Background: '#2196F3' // Blue (0-30s)
+        completionStage2Background: '#4CAF50' // Green (31-70s)
+        completionStage3Background: '#FFC107' // Yellow (71-120s)
+        completionStage4Background: '#FF9800' // Orange (121-180s)
+        completionStage5Background: '#F44336' // Red (>180s)
+        
+        There is no explicitly defined monospace font stack in the theme.
+        
+        Base font size is defined in index.css on the :root element:
+        font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+        line-height: 1.5;
+        font-weight: 400;
+        
+        The TimerDisplay component uses font-size: 1.2rem; font-weight: bold;
+        ```
+
+4.  **Visual Target Clarification:**
+    *   **Question:** Beyond the Timer/Bar looking like the second image (brain bar), are there specific aspects of the *overall* NYT Games app layout (header, main content area division, footer/controls) that we should be aiming for in this phase? Or is the focus purely on refining the Timer/Bar and ensuring the basic `100vh` structure is sound?
+    *   **Rationale:** Helps define the scope of Phase 4.75 – is it just fixing the Timer/Bar styling or a broader layout overhaul?
+    *   **Answer:**
+        ```
+       I think for now we can focus on this, but we should consider wehther to style the crossword and clue box now?
+        ```
+
+5.  **Existing Responsiveness?**
+    *   **Question:** Are there *any* existing `@media` queries or responsive techniques currently used in the layout components or elsewhere?
+    *   **Rationale:** Good to know if we're building on existing responsive foundations or starting fresh.
+    *   **Answer:**
+        ```
+        /* Existing responsive implementations */
+        
+        Yes, there are multiple @media queries used throughout the application, primarily in CrosswordStyles.ts.
+        Common breakpoints used:
+        
+        - @media (max-width: 992px) - For tablet-sized screens
+        - @media (max-width: 768px) - For small tablets/large phones
+        - @media (max-width: 414px) - For mobile phones
+        
+        These are used for:
+        - Adjusting font sizes
+        - Reducing padding and margins
+        - Changing layout structures (like switching from row to column)
+        - Resizing components
+        
+        The CrosswordWrapper component, for example, uses:
+        @media (max-width: 768px) {
+          max-width: 315px;
+          max-height: 315px;
+          padding: 0.2rem;
+        }
+        
+        @media (max-width: 414px) {
+          padding: 0.1rem;
+        }
+        
+        There's also an accessibility consideration for users who prefer reduced motion:
+        @media (prefers-reduced-motion: reduce) {
+          g.clue-cell.word-correct,
+          .puzzle-complete-indicator {
+            animation: none;
+          }
+        }
+        ```
+
+---

@@ -5,39 +5,58 @@ export const AppWrapper = styled.div`
   display: flex;
   flex-direction: column;
   height: 100vh;
-  overflow: hidden;
+  width: 100%;
+  padding-top: var(--safe-area-inset-top);
+  padding-right: var(--safe-area-inset-right);
+  padding-bottom: var(--safe-area-inset-bottom);
+  padding-left: var(--safe-area-inset-left);
 `;
 
-// Top banner area with fixed height
+// Top banner area with padding-based height
 export const Banner = styled.div`
-  height: 50px;
+  flex: 0 0 auto;
+  padding: 0.75rem 1rem;
   background-color: #CCC;
-  flex-shrink: 0;
 `;
 
 // Flexible middle area that contains the crossword grid
 export const CrosswordArea = styled.div`
-  flex-grow: 1;
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 10px;
   overflow: hidden;
 `;
 
-// Fixed height area for showing current clue
+// Clue area with padding-based height
 export const ClueArea = styled.div`
-  height: 70px;
-  background-color: #DDD;
-  flex-shrink: 0;
+  flex: 0 0 auto;
+  padding: 0.75rem 1rem;
+  min-height: 3rem;
+  background-color: ${props => props.theme.gridBackground || 'transparent'};
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: auto;
+  width: 100%;
 `;
 
-// Fixed height area for keyboard at bottom
+// Keyboard area with padding-based height
 export const KeyboardArea = styled.div`
-  height: 200px;
+  flex: 0 0 auto;
+  padding: 1rem;
+  min-height: 8rem;
   background-color: #EEE;
-  flex-shrink: 0;
+`;
+
+// Container for the timer and progress bar layout
+export const TimerBarContainer = styled.div<{ $visible?: boolean }>`
+  display: ${props => props.$visible ? 'flex' : 'none'};
+  flex: 0 0 auto;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  gap: 1rem;
+  justify-content: space-between;
+  width: 100%;
 `;

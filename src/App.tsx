@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useGameStateManager } from './GameFlow/state/useGameStateManager'
-import { AppWrapper, Banner, CrosswordArea, ClueArea, KeyboardArea } from './Layout/components'
+import { AppWrapper, CrosswordArea, ClueArea, KeyboardArea, TimerBarContainer } from './Layout/components'
 import ThemedCrossword from './Crossword/components/ThemedCrossword'
 import ClueVisualiser from './Crossword/components/ClueVisualiser'
 import styled, { ThemeProvider } from 'styled-components'
 import useTimer from './Timer/hooks/useTimer'
 import TimerDisplay from './Timer/components/TimerDisplay'
+import StageProgressBar from './Timer/components/StageProgressBar'
 import { crosswordTheme } from './Crossword/styles/CrosswordStyles'
 
 // Styled Start Game button
@@ -76,7 +77,7 @@ function App() {
   (window as any).debugGameState = gameState;
   
   // Use timer hook for tracking elapsed time and stage - updated to preserve time when game is complete
-  const { elapsedTime, currentStage } = useTimer({ 
+  const { elapsedTime, currentStage, stageTimeRemainingRatio } = useTimer({ 
     isGameActive: isGameStarted && !gameState.isGameComplete,
     isGameComplete: isGameStarted && gameState.isGameComplete
   });
@@ -116,12 +117,18 @@ function App() {
   return (
     <ThemeProvider theme={crosswordTheme}>
       <AppWrapper>
-        <Banner>Daily Crossword</Banner>
-        <TimerDisplay 
-          elapsedTime={elapsedTime} 
-          currentStage={currentStage} 
-          isVisible={isGameStarted}
-        />
+        <TimerBarContainer $visible={isGameStarted}>
+          <TimerDisplay 
+            elapsedTime={elapsedTime} 
+            currentStage={currentStage} 
+            isVisible={isGameStarted}
+          />
+          <StageProgressBar
+            ratio={stageTimeRemainingRatio}
+            currentStage={currentStage}
+            isGameActive={isGameStarted && !gameState.isGameComplete}
+          />
+        </TimerBarContainer>
         {isGameStarted ? (
           <>
             <CrosswordArea>

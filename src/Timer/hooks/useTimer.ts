@@ -35,7 +35,25 @@ interface UseTimerReturn {
    * 5: >180s (Red)
    */
   currentStage: number;
+  
+  /**
+   * Ratio of time remaining in current stage (1.0 to 0.0)
+   * 1.0 = full bar (just entered stage or special case)
+   * 0.0 = empty bar (about to transition to next stage)
+   */
+  stageTimeRemainingRatio: number;
 }
+
+/**
+ * Stage time thresholds in seconds
+ * Index corresponds to stage transition points:
+ * 0: Start
+ * 1: Stage 1 to 2 transition (30s)
+ * 2: Stage 2 to 3 transition (70s)
+ * 3: Stage 3 to 4 transition (120s)
+ * 4: Stage 4 to 5 transition (180s)
+ */
+export const STAGE_THRESHOLDS = [0, 30, 70, 120, 180];
 
 /**
  * Custom hook that tracks game time and calculates completion stage.
@@ -50,7 +68,7 @@ export const useTimer = ({
   // Track when game started
   const startTimeRef = useRef<number | null>(null);
   
-  // Track elapsed time in seconds
+  // Track elapsed time in seconds (as a precise floating-point number)
   const [elapsedTime, setElapsedTime] = useState<number>(0);
   
   // Track if the game was previously completed (to preserve final time)
@@ -77,12 +95,13 @@ export const useTimer = ({
         startTimeRef.current = Date.now();
       }
       
-      // Update elapsed time every second
+      // Update elapsed time every 50ms with precise calculation
       intervalId = window.setInterval(() => {
         const currentTime = Date.now();
-        const elapsedSeconds = Math.floor((currentTime - (startTimeRef.current || currentTime)) / 1000);
-        setElapsedTime(elapsedSeconds);
-      }, 1000);
+        // Calculate precise seconds (no Math.floor)
+        const elapsedSecondsPrecise = (currentTime - (startTimeRef.current || currentTime)) / 1000;
+        setElapsedTime(elapsedSecondsPrecise);
+      }, 50);
     } else if (!wasCompletedRef.current) {
       // Only reset if the game is not active AND not completed
       // This preserves the final time when a game is completed
@@ -104,17 +123,50 @@ export const useTimer = ({
    * @returns Stage number (1-5)
    */
   const calculateStage = (time: number): number => {
-    if (time <= 0) return 0; // Not started
-    if (time <= 30) return 1; // Stage 1: 0-30s (Blue)
-    if (time <= 70) return 2; // Stage 2: 31-70s (Green)
-    if (time <= 120) return 3; // Stage 3: 71-120s (Yellow)
-    if (time <= 180) return 4; // Stage 4: 121-180s (Orange)
+    if (time <= STAGE_THRESHOLDS[0]) return 0; // Not started
+    if (time <= STAGE_THRESHOLDS[1]) return 1; // Stage 1: 0-30s (Blue)
+    if (time <= STAGE_THRESHOLDS[2]) return 2; // Stage 2: 31-70s (Green)
+    if (time <= STAGE_THRESHOLDS[3]) return 3; // Stage 3: 71-120s (Yellow)
+    if (time <= STAGE_THRESHOLDS[4]) return 4; // Stage 4: 121-180s (Orange)
     return 5; // Stage 5: >180s (Red)
   };
   
+  /**
+   * Calculate the ratio of time remaining in the current stage (1.0 to 0.0)
+   * @param time - Current elapsed time in seconds
+   * @param stage - Current stage (0-5)
+   * @returns Ratio of time remaining in the current stage
+   */
+  const calculateStageTimeRemainingRatio = (time: number, stage: number): number => {
+    // Handle Stage 0 (not started): return full bar
+    if (stage === 0) return 1.0;
+    
+    // Handle Stage 5 (overtime): return full bar
+    if (stage === 5) return 1.0;
+    
+    // For Stages 1-4, calculate the ratio based on time elapsed in the stage
+    const stageStartTime = STAGE_THRESHOLDS[stage - 1];
+    const stageEndTime = STAGE_THRESHOLDS[stage];
+    const stageDuration = stageEndTime - stageStartTime;
+    const timeElapsedInStage = time - stageStartTime;
+    
+    // Calculate ratio: 1.0 (just started stage) to 0.0 (about to transition)
+    const ratio = 1 - (timeElapsedInStage / stageDuration);
+    
+    // Clamp between 0 and 1 to handle any edge cases
+    return Math.max(0, Math.min(1, ratio));
+  };
+  
+  // Calculate current stage (using the precise elapsed time)
+  const currentStage = calculateStage(elapsedTime);
+  
+  // Calculate time remaining ratio (using the precise elapsed time)
+  const stageTimeRemainingRatio = calculateStageTimeRemainingRatio(elapsedTime, currentStage);
+  
   return {
-    elapsedTime,
-    currentStage: calculateStage(elapsedTime)
+    elapsedTime: Math.floor(elapsedTime), // Floor only for external display
+    currentStage,
+    stageTimeRemainingRatio
   };
 };
 

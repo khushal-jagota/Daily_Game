@@ -261,54 +261,12 @@ export const CardContent = styled.div`
 
 // Update CrosswordWrapper with fixed dimensions to maintain aspect ratio
 export const CrosswordWrapper = styled.div`
-  background: #fffaf0;
-  border-radius: 8px;
-  padding: 0.25rem; /* Reduced from 0.5rem */
+  display: block;
   width: 100%;
-  height: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  aspect-ratio: 1/1;
-  max-width: 405px; /* Reduced by 10% from 450px */
-  max-height: 405px; /* Reduced by 10% from 450px */
-  overflow: visible; /* Changed from 'hidden' to 'visible' to allow animation to exceed container */
-  
-  @media (max-width: 768px) {
-    max-width: 315px; /* Reduced by 10% from 350px */
-    max-height: 315px; /* Reduced by 10% from 350px */
-    padding: 0.2rem; /* Reduced from 0.5rem */
-  }
-
-  @media (max-width: 414px) {
-    padding: 0.1rem; /* Further reduced for very small screens */
-  }
-
-  /* Target the crossword grid container */
-  > div {
-    width: 100% !important;
-    height: 100% !important;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    overflow: visible; /* Changed from 'hidden' to 'visible' to allow animation to exceed container */
-    
-    /* Target the SVG container */
-    > div {
-      width: 100% !important;
-      height: 100% !important;
-      overflow: visible; /* Changed from 'hidden' to 'visible' to allow animation to exceed container */
-    }
-
-    /* Target the SVG element directly */
-    svg {
-      width: 100% !important;
-      height: 100% !important;
-      max-width: 100%;
-      max-height: 100%;
-      overflow: visible; /* Added to ensure SVG elements can grow outside bounds */
-    }
-  }
+  height: auto;
+  max-width: 100%;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
 `;
 
 export const GameContainer = styled.div`
