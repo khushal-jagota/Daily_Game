@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useGameStateManager } from './GameFlow/state/useGameStateManager'
-import { AppWrapper, CrosswordArea, ClueArea, KeyboardArea, TimerBarContainer } from './Layout/components'
+import { AppWrapper, CrosswordArea, ClueArea, KeyboardArea, TimerBarContainer, KeyboardPlaceholder } from './Layout/components'
 import ThemedCrossword from './Crossword/components/ThemedCrossword'
 import ClueVisualiser from './Crossword/components/ClueVisualiser'
 import styled, { ThemeProvider } from 'styled-components'
@@ -143,7 +143,8 @@ function App() {
               />
             </ClueArea>
             <KeyboardArea>
-              {/* Virtual keyboard may be added in future phases */}
+              {/* Keyboard placeholder for testing visibility */}
+              <KeyboardPlaceholder aria-hidden="true">Keyboard Placeholder</KeyboardPlaceholder>
             </KeyboardArea>
             
             {/* Debug panel to show completedWords */}

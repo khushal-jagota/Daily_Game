@@ -224,7 +224,170 @@ To refactor the application's layout and styling for a clean, responsive, single
     ```
     {/* Aligned fonts/colors with theme. Adjusted padding. */}
     ```
+# Phase 4.75 Plan: Layout Refactor to CSS Grid & Styling Polish (Version 3.1)
 
+**Document Version:** 3.1
+**Date:** [Current Date]
+
+## 1. Overall Goal
+
+Refactor the application's root layout to use **CSS Grid** for robust vertical space distribution, ensuring a no-scroll experience using **modern viewport units (`svh`/`dvh`)** and **safe-area handling**. Ensure reliable minimum space for all sections (including the keyboard placeholder) using **flexible `minmax()` and `clamp()` definitions**. Polish component styling for a clean, responsive, integrated look. Accessibility features beyond basic styling and advanced QA automation are deferred.
+
+## 2. Prerequisites
+
+*   Current codebase state (styling up to 4.75.11 applied, but vertical layout based on Flexbox is problematic).
+*   Functional Timer & Progress Bar logic exists.
+*   Target visual style understood.
+*   Theme object provides necessary color variables.
+
+## 3. Implementation Steps
+
+### Step 4.75.12: Verify Global Resets & Define Safe-Area Variables
+
+*   **File:** `src/index.css`
+*   **Goal:** Confirm base resets and define CSS variables for safe areas with fallbacks.
+*   **Implementation:**
+    *   [ ] **Verify** `*, *::before, *::after { box-sizing: border-box; }` exists.
+    *   [ ] **Verify** `html, body { margin: 0; padding: 0; height: 100%; }`.
+    *   [ ] **Verify** `#root` (or app mount point) styles are minimal (e.g., `height: 100%;`) and **do not include `display: flex`**.
+    *   [ ] **Add/Verify** CSS Variables for safe area insets with `0px` fallbacks and `@supports` override:
+        ```css
+        :root {
+          --safe-area-inset-top: 0px;
+          --safe-area-inset-right: 0px;
+          --safe-area-inset-bottom: 0px;
+          --safe-area-inset-left: 0px;
+        }
+        @supports (padding-top: env(safe-area-inset-top)) {
+          :root {
+            --safe-area-inset-top: env(safe-area-inset-top);
+            --safe-area-inset-right: env(safe-area-inset-right);
+            --safe-area-inset-bottom: env(safe-area-inset-bottom);
+            --safe-area-inset-left: env(safe-area-inset-left);
+          }
+        }
+        ```
+*   **Test:**
+    *   [ ] Quick visual check for resets. Use Dev Tools to confirm variables defined.
+*   **Notes:**
+    ```
+    {/* Confirmed foundational CSS is correct, removed flex from #root. Acknowledged TODO: Use logical properties (padding-inline-*, padding-block-*) for full RTL support in future refactor. */}
+    ```
+
+### Step 4.75.13: Refactor `AppWrapper` to CSS Grid & Apply Viewport Units/Safe Areas
+
+*   **File:** `src/Layout/components.ts` (`AppWrapper`)
+*   **Goal:** Switch main container to CSS Grid, use robust viewport units (`svh`/`dvh`), apply safe areas via variables, define flexible row tracks.
+*   **Implementation:**
+    *   [ ] **Modify** `AppWrapper` styles:
+        ```css
+        export const AppWrapper = styled.div`
+          display: grid; /* SWITCH TO GRID */
+          grid-template-rows:
+            auto                                     /* Banner (sized by padding/content) */
+            auto                                     /* TimerBarContainer (sized by padding/content) */
+            1fr                                      /* CrosswordArea (takes remaining space) */
+            minmax(clamp(2.5rem, 5vh, 4rem), auto)    /* ClueArea (flexible min height) - ADJUST clamp values */
+            minmax(clamp(6rem, 20vh, 10rem), auto)    /* KeyboardArea (flexible min height) - ADJUST clamp values */
+            ; 
+          /* Use svh with dvh fallback for viewport height */
+          min-height: 100dvh; 
+          @supports (min-height: 100svh) {
+            min-height: 100svh;
+          }
+          width: 100%; 
+          /* Apply safe-area padding using CSS variables */
+          padding-top: var(--safe-area-inset-top);
+          padding-right: var(--safe-area-inset-right);
+          padding-bottom: var(--safe-area-inset-bottom);
+          padding-left: var(--safe-area-inset-left);
+          gap: 0; /* Explicitly no gap between grid rows */
+          overflow: hidden; /* Prevent AppWrapper itself from scrolling */
+        `;
+        ```
+*   **Test:**
+    *   [ ] Load app. Inspect `AppWrapper` to verify `display: grid`, `grid-template-rows`, `svh`/`dvh` usage. Check safe area padding effect.
+    *   [ ] Test row sizing with `clamp()` on various **short viewports** (mobile landscape, resized desktop). Verify **NO vertical scrollbar on the page**. Adjust `clamp()` values iteratively until balanced and fitting.
+*   **Notes:**
+    ```
+    {/* Switched AppWrapper to Grid. Implemented svh/dvh fallback. Used clamp() within minmax() for flexible row heights. Set explicit gap: 0. Recorded final clamp() values. Confirmed no page scroll. */}
+    ```
+
+### Step 4.75.14: Remove Old Flex Props from Grid Items
+
+*   **File:** `src/Layout/components.ts` (`Banner`, `TimerBarContainer`, `CrosswordArea`, `ClueArea`, `KeyboardArea`)
+*   **Goal:** Clean up obsolete Flexbox sizing properties now that parent is Grid.
+*   **Implementation:**
+    *   [ ] **Delete** (do not comment out) `flex: 0 0 auto;` from `Banner`, `TimerBarContainer`, `ClueArea`, `KeyboardArea`.
+    *   [ ] **Delete** `flex: 1 1 auto;` and `min-height: 0;` from `CrosswordArea`.
+*   **Test:**
+    *   [ ] Verify layout still holds via Grid definition. Check Dev Tools to confirm `flex` properties are gone.
+*   **Notes:**
+    ```
+    {/* DELETED obsolete flex properties from Grid items. */}
+    ```
+
+### Step 4.75.15: Style & Verify `KeyboardArea` Placeholder Size
+
+*   **File:** `src/Layout/components.ts` (`KeyboardArea`)
+*   **Goal:** Ensure keyboard placeholder is visible and correctly occupies its defined minimum grid space.
+*   **Implementation:**
+    *   [ ] Verify/Set `background-color` (e.g., `theme.colors.keyboardBackground || '#EEE';`).
+    *   [ ] Verify/Set internal `padding` using `rem` (e.g., `padding: 0.5rem;`).
+    *   [ ] Add `overflow: hidden;`.
+    *   [ ] *(Optional)* Add placeholder text/border for testing visibility.
+*   **Test:**
+    *   [ ] Verify `KeyboardArea` visible at bottom. Verify its height corresponds to the minimum set in `grid-template-rows`' `minmax(clamp(...))` on various screen heights.
+*   **Notes:**
+    ```
+    {/* Styled KeyboardArea placeholder. Height correctly determined by grid row definition and clamp(). */}
+    ```
+
+### Step 4.75.16: Verify Crossword Grid Fitting in Grid Context
+
+*   **File:** `src/Layout/components.ts` (`CrosswordArea`), `src/Crossword/styles/CrosswordStyles.ts` (`CrosswordWrapper`)
+*   **Goal:** Confirm the square crossword grid centers and scales correctly within its `1fr` grid row.
+*   **Implementation:**
+    *   [ ] **Verify** `CrosswordArea` styles: `display: flex; justify-content: center; align-items: center; overflow: hidden;`.
+    *   [ ] **Verify** `CrosswordWrapper` (or the element it applies to) styles: `display: block; width: 100%; height: auto; max-width: 100%; aspect-ratio: 1 / 1; overflow: hidden;` (and internal overrides remain removed). Consider adding `max-height: 100%` to `CrosswordWrapper` for extra safety within the flex centering.
+*   **Test:**
+    *   [ ] Resize browser window (width and height). Verify `CrosswordArea` track flexes. Verify grid wrapper stays square, centered. Check SVG scaling (accept internal limitations if necessary).
+*   **Notes:**
+    ```
+    {/* Grid wrapper aspect-ratio maintained. Centering within CrosswordArea track confirmed. Added max-height: 100% to wrapper. Internal SVG scaling limitation noted (if applicable). */}
+    ```
+
+### Step 4.75.17: Verify Final Component Styles & Layout
+
+*   **Files:** All relevant layout and component files.
+*   **Goal:** Final check of all previously styled components within the new Grid layout.
+*   **Implementation:**
+    *   [ ] Review `Banner`, `TimerBarContainer`, `TimerDisplay`, `StageProgressBar`, `ClueArea`, `ClueVisualiser`.
+    *   [ ] Ensure their individual styles (colors, fonts, padding, responsive timer font/width, progress bar shape/animation etc.) still look correct. Make minor tweaks if layout changes affected them.
+*   **Test:**
+    *   [ ] Holistic visual review of the entire application layout. Check proportions, spacing, alignment.
+    *   [ ] **Perform Real Device Testing:** Mandatory check on target iOS and Android devices (portrait and landscape). Pay close attention to safe areas and keyboard area height.
+    *   [ ] **Perform Zoom Testing:** Use browser zoom and OS accessibility zoom to check for layout breakage or usability issues.
+*   **Notes:**
+    ```
+    {/* Final visual pass complete. Layout holds up on different devices/zoom levels. Real device testing passed. */}
+    ```
+
+## 4. Deliverables
+
+*   Refactored `AppWrapper` using CSS Grid, `svh`/`dvh`, and flexible row definitions.
+*   Updated layout components compatible with Grid layout.
+*   Styled `KeyboardArea` placeholder defining minimum flexible space.
+*   Verified styling of Timer, Progress Bar, Clue display, and Crossword grid within the new layout.
+*   Updated Manual Testing Checklist (emphasizing viewport variations, real devices, zoom).
+
+## 5. Estimate
+
+*   ~1-2 Developer Days (includes Grid refactor, styling verification, and more rigorous testing).
+
+---
+
+This plan (v3.1) represents the most robust approach based on the feedback received.
 ## 4. Deliverables
 
 *   Updated layout components, `TimerDisplay`, `StageProgressBar`, `ClueVisualiser`, grid wrapper styles adhering to responsive best practices.

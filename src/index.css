@@ -5,6 +5,12 @@
 html, body {
   margin: 0;
   padding: 0;
+  height: 100%;
+}
+
+/* Root element styles */
+#root {
+  height: 100%;
 }
 
 :root {
@@ -27,7 +33,7 @@ html, body {
   --safe-area-inset-left: 0px;
 }
 
-@supports (padding: env(safe-area-inset-top)) {
+@supports (padding-top: env(safe-area-inset-top)) {
   :root {
     --safe-area-inset-top: env(safe-area-inset-top);
     --safe-area-inset-right: env(safe-area-inset-right);
@@ -47,7 +53,6 @@ a:hover {
 
 body {
   min-width: 320px;
-  min-height: 100vh;
 }
 
 h1 {
