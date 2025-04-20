@@ -1,17 +1,22 @@
-import styled from 'styled-components';
+import styled from "styled-components";
 
 // Main application wrapper that contains all layout components
 export const AppWrapper = styled.div`
   display: grid;
   /* Explicit, valid grid‑template‑rows value: */
-  grid-template-rows: auto 1fr max-content minmax(clamp(13rem,20vh,15rem), auto);
+  grid-template-rows: auto 1fr max-content minmax(
+      clamp(13rem, 20vh, 15rem),
+      auto
+    );
 
   /* Use svh with dvh fallback for viewport height */
-  min-height: 100dvh; 
+  min-height: 100dvh;
+  max-height: 100dvh;
+  height: 100dvh;
   @supports (min-height: 100svh) {
     min-height: 100svh;
   }
-  width: 100%; 
+  width: 100%;
   /* Apply safe-area padding using CSS variables */
   padding-top: var(--safe-area-inset-top);
   padding-right: var(--safe-area-inset-right);
@@ -24,7 +29,7 @@ export const AppWrapper = styled.div`
 // Top banner area with padding-based height
 export const Banner = styled.div`
   padding: 0.75rem 1rem;
-  background-color: #CCC;
+  background-color: #ccc;
 `;
 
 // Flexible middle area that contains the crossword grid
@@ -33,11 +38,12 @@ export const CrosswordArea = styled.div`
   justify-content: center;
   align-items: center;
   overflow: hidden;
+  height: 100%;
 `;
 
 // Clue area with padding-based height
 export const ClueArea = styled.div`
-  background-color: ${props => props.theme.gridBackground || 'transparent'};
+  background-color: ${(props) => props.theme.gridBackground || "transparent"};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -47,16 +53,17 @@ export const ClueArea = styled.div`
 // Keyboard area with padding-based height
 export const KeyboardArea = styled.div`
   padding: 0.75rem 0.1rem;
-  background-color: ${props => props.theme.keyboardBackground || props.theme.gridBackground || '#EEE'};
+  background-color: ${(props) =>
+    props.theme.keyboardBackground || props.theme.gridBackground || "#EEE"};
   overflow: hidden;
   display: flex;
   justify-content: center;
   align-items: center;
-  
+
   @media (max-width: 768px) {
     padding: 0.5rem 0.1rem;
   }
-  
+
   @media (max-width: 480px) {
     padding: 0.25rem 0;
   }
@@ -65,14 +72,14 @@ export const KeyboardArea = styled.div`
 // Temporary placeholder for keyboard - will be removed when actual keyboard is implemented
 export const KeyboardPlaceholder = styled.div`
   opacity: 0.5;
-  color: ${props => props.theme.textColor || '#666'};
+  color: ${(props) => props.theme.textColor || "#666"};
   font-size: 0.9rem;
   text-align: center;
 `;
 
 // Container for the timer and progress bar layout
 export const TimerBarContainer = styled.div<{ $visible?: boolean }>`
-  display: ${props => props.$visible ? 'flex' : 'none'};
+  display: ${(props) => (props.$visible ? "flex" : "none")};
   align-items: center;
   padding: 0.5rem 1rem;
   gap: 1rem;
