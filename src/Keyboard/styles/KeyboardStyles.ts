@@ -38,7 +38,7 @@ export const KeyboardGlobalStyles = createGlobalStyle`
 
   /* Hover state for keyboard buttons */
   .hg-theme-default .hg-button:hover {
-    background: ${props => props.theme.focusBackground || '#e3f2fd'};
+    background: ${props => props.theme.keyBackground || '#e3f2fd'};
   }
 
   /* Active state for keyboard buttons */
