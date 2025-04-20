@@ -1,312 +1,10 @@
-//? Old implementation using  refs, I refactored into css only
-// import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
-// import PropTypes, { InferProps } from "prop-types";
-
-// import styled, { ThemeContext } from "styled-components";
-
-// import Cell from "./Cell"; // Assuming Cell component is in the same directory
-// import { getCellKey } from "../../../lib/utils"; // Import getCellKey utility
-
-// import { CrosswordContext, CrosswordSizeContext } from "./context";
-// import { InputRefCallback } from "../../types"; // Removed FocusHandler import
-
-// // GridWrapper styling remains unchanged
-// // const GridWrapper = styled.div.attrs((/* props */) => ({
-// //   className: "crossword grid",
-// // }))`
-// //   display: flex; /* turn into a flex-item */
-// //   flex: 1 1 auto; /* grow and shrink to fill parent */
-// //   min-height: 0; /* allow shrinking below content height */
-// //   width: 100%;
-// // `;
-
-// export const SvgWrapper = styled.div`
-//   position: relative;
-//   display: flex;
-//   justify-content: center;
-//   align-items: center;
-//   flex: 1 1 auto;
-//   min-height: 0;
-//   overflow: hidden;
-// `;
-
-// // Update PropTypes to include onInputRefChange
-// const CrosswordGridPropTypes = {
-//   // theme prop removed since it's now consumed from context
-//   onInputRefChange: PropTypes.func,
-// };
-
-// // Define an explicit interface that extends the inferred props
-// interface ICrosswordGridProps
-//   extends InferProps<typeof CrosswordGridPropTypes> {
-//   onInputRefChange?: InputRefCallback;
-// }
-
-// /**
-//  * The rendering component for the crossword grid itself.
-//  */
-// export default function CrosswordGrid({
-//   onInputRefChange,
-// }: ICrosswordGridProps) {
-//   // Destructure necessary values from CrosswordContext
-//   // Renamed context props locally for clarity (focusedRow, focusedCol)
-//   const {
-//     rows,
-//     cols,
-//     gridData,
-//     cellCompletionStatus,
-//     handleInputKeyDown,
-//     handleInputChange,
-//     handleCellClick, // The context function itself
-//     handleInputClick,
-//     focused, // The internal focus state of the hidden input
-//     selectedPosition: { row: focusedRow, col: focusedCol }, // The selected cell coordinates
-//     selectedDirection: currentDirection, // The selected direction
-//     selectedNumber: currentNumber, // The selected clue number
-//   } = useContext(CrosswordContext);
-
-//   // Keep inputRef for the callback pattern
-//   const inputRef = useRef<HTMLInputElement>(null);
-
-//   const wrapperRef = useRef<HTMLDivElement>(null);
-//   const [wrapperSize, setWrapperSize] = useState({ width: 0, height: 0 });
-
-//   useEffect(() => {
-//     if (!wrapperRef.current) return;
-//     const ro = new ResizeObserver((entries) => {
-//       for (let entry of entries) {
-//         const { width, height } = entry.contentRect;
-//         setWrapperSize({ width, height });
-//       }
-//     });
-//     ro.observe(wrapperRef.current);
-//     return () => ro.disconnect();
-//   }, []);
-
-//   const cellSize = useMemo(() => {
-//     if (cols === 0 || rows === 0) return 0;
-//     const size = Math.min(wrapperSize.width / cols, wrapperSize.height / rows);
-//     console.log("size", size);
-//     return size;
-//   }, [wrapperSize, cols, rows]);
-
-//   // Get the theme directly from context
-//   const finalTheme = useContext(ThemeContext);
-
-//   // Calculate sizing based on cell size (remains unchanged)
-//   // const cellSize = 10;
-//   // 3) ✨ Derive all the constants off of that
-//   const cellPadding = cellSize * 0.0125; // same ratio as .125 / 10
-//   const cellInner = cellSize - cellPadding * 2;
-//   const cellHalf = cellSize / 2;
-//   const fontSize = cellInner * 0.7;
-
-//   const sizeContext = useMemo(
-//     () => ({ cellSize, cellPadding, cellInner, cellHalf, fontSize }),
-//     [cellSize, cellPadding, cellInner, cellHalf, fontSize]
-//   );
-
-//   // 4) ✨ SVG dimensions from dynamic cellSize
-//   const svgWidth = cols * cellSize;
-//   const svgHeight = rows * cellSize;
-
-//   // Hidden input styling just scales with the same percentages
-//   const cellWidthPct = 100 / cols;
-//   const cellHeightPct = 100 / rows;
-//   // useMemo(() => {
-//   //   console.log("cellWidthPct", svgWidth);
-//   // }, [svgWidth]);
-//   useMemo(() => {
-//     console.log("cellHeightPct", cellHeightPct);
-//   }, [cellHeightPct]);
-//   useMemo(() => {
-//     console.log("svgHeight", svgHeight);
-//   }, [svgHeight]);
-
-//   const inputStyle = useMemo(
-//     () =>
-//       ({
-//         position: "absolute",
-//         top: `calc(${focusedRow * cellHeightPct}% + 2px)`,
-//         left: `calc(${focusedCol * cellWidthPct}% + 2px)`,
-//         width: `calc(${cellWidthPct}% - 4px)`,
-//         height: `calc(${cellHeightPct}% - 4px)`,
-//         fontSize: `${fontSize * 6}px`,
-//         textAlign: "center",
-//         backgroundColor: "transparent",
-//         caretColor: "transparent",
-//         margin: 0,
-//         padding: 0,
-//         border: 0,
-//         outline: "none",
-//         cursor: "default",
-//       } as const),
-//     [cellWidthPct, cellHeightPct, focusedRow, focusedCol, fontSize]
-//   );
-
-//   //? I commented out the old implementation
-//   // const sizeContext = useMemo(
-//   //   () => ({
-//   //     cellSize,
-//   //     cellPadding,
-//   //     cellInner,
-//   //     cellHalf,
-//   //     fontSize,
-//   //   }),
-//   //   [cellSize, cellPadding, cellInner, cellHalf, fontSize] // Dependencies are constants, but keep for clarity
-//   // );
-
-//   // const height = useMemo(() => rows * cellSize, [rows, cellSize]);
-//   // const width = useMemo(() => cols * cellSize, [cols, cellSize]);
-//   // const cellWidthHtmlPct = useMemo(() => 100 / cols, [cols]);
-//   // const cellHeightHtmlPct = useMemo(() => 100 / rows, [rows]);
-
-//   // // Style for the hidden input (remains unchanged)
-//   // const inputStyle = useMemo(
-//   //   () =>
-//   //     ({
-//   //       position: "absolute",
-//   //       // Adjustments to align input (unchanged from original)
-//   //       top: `calc(${focusedRow * cellHeightHtmlPct * 0.995}% + 2px)`,
-//   //       left: `calc(${focusedCol * cellWidthHtmlPct}% + 2px)`,
-//   //       width: `calc(${cellWidthHtmlPct}% - 4px)`,
-//   //       height: `calc(${cellHeightHtmlPct}% - 4px)`,
-//   //       fontSize: `${fontSize * 6}px`, // Font size might need adjustment
-//   //       textAlign: "center",
-//   //       textAnchor: "middle",
-//   //       backgroundColor: "transparent",
-//   //       caretColor: "transparent", // Hide caret
-//   //       margin: 0,
-//   //       padding: 0,
-//   //       border: 0,
-//   //       outline: "none",
-//   //       cursor: "default",
-//   //     } as const), // Using 'as const' for stricter type checking on style object
-//   //   [cellWidthHtmlPct, cellHeightHtmlPct, focusedRow, focusedCol, fontSize]
-//   // );
-
-//   return (
-//     <CrosswordSizeContext.Provider value={sizeContext}>
-//       {/* <GridWrapper> */}
-//       {/* Outer div for positioning the input correctly */}
-//       <div
-//         style={{
-//           position: "relative",
-//           flex: 1 /* fill the GridWrapper’s height */,
-//           minHeight: 0 /* again, allow it to shrink */,
-//           overflow: "hidden" /* clip anything outside */,
-//           display: "flex",
-//           justifyContent: "center",
-//           alignItems: "center",
-//           flexGrow: 1,
-//           flexShrink: 1,
-//           flexBasis: "auto",
-//           height: "100%",
-//         }}
-//         id={"svg-size-wrapper"}
-//         ref={wrapperRef}
-//       >
-//         <svg
-//           viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-//           preserveAspectRatio="xMidYMid meet"
-//           style={{
-//             display: "block",
-//             width: "100%",
-//             height: "100%",
-//           }}
-//         >
-//           {/* Background rectangle */}
-//           <rect
-//             x={0}
-//             y={0}
-//             width={svgWidth}
-//             height={svgHeight}
-//             fill={finalTheme?.gridBackground ?? "transparent"}
-//           />
-//           {/* Render cells */}
-//           {gridData.flatMap((rowData, row) =>
-//             rowData.map((cellData, col) => {
-//               // Skip rendering if the cell is not used
-//               if (!cellData.used) {
-//                 return undefined;
-//               }
-
-//               // --- CORRECTED FOCUS/HIGHLIGHT CALCULATIONS ---
-//               // Determine if this cell is the currently focused cell based on context coordinates
-//               const isFocused = row === focusedRow && col === focusedCol;
-
-//               // Determine if this cell is part of the highlighted clue based on context direction/number
-//               const isHighlighted =
-//                 !!currentNumber && cellData[currentDirection] === currentNumber;
-
-//               // Get the cell completion status from the map
-//               const cellKey = getCellKey(row, col);
-//               const completionStatus = cellCompletionStatus?.get(cellKey);
-//               // --- END CORRECTIONS ---
-
-//               // --- TEMPORARY LOGGING (Uncomment to use) ---
-//               /*
-//                 console.log(
-//                   `[Grid Rendering Cell ${row},${col}] ContextPos: (${focusedRow},${focusedCol}), ContextDir: ${currentDirection}, ContextNum: ${currentNumber} => Calculated: focus=${isFocused}, highlight=${isHighlighted}`
-//                 );
-//                 */
-//               // --- END LOGGING ---
-
-//               // Render the Cell component
-//               return (
-//                 <Cell
-//                   // Using standardized utility function for cell keys
-//                   key={getCellKey(row, col)}
-//                   cellData={cellData}
-//                   focus={isFocused} // Pass calculated focus state
-//                   highlight={isHighlighted} // Pass calculated highlight state
-//                   completionStatus={completionStatus} // Pass completion status
-//                   // --- CORRECTED onClick ---
-//                   // Wrap context handler to pass correct cellData argument
-//                   onClick={() => handleCellClick(cellData)}
-//                 />
-//               );
-//             })
-//           )}
-//         </svg>
-//         {/* Hidden input field for capturing keyboard events */}
-//         <input
-//           ref={(node: HTMLInputElement | null) => {
-//             // Keep the inputRef for local use
-//             inputRef.current = node;
-//             // Call the callback passed from App.tsx if provided
-//             onInputRefChange?.(node);
-//           }}
-//           aria-label="crossword-input"
-//           type="text"
-//           onClick={handleInputClick}
-//           onKeyDown={handleInputKeyDown}
-//           onChange={handleInputChange}
-//           value=""
-//           autoComplete="off"
-//           spellCheck="false"
-//           autoCorrect="off"
-//           style={inputStyle}
-//         />
-//       </div>
-//       {/* </GridWrapper> */}
-//     </CrosswordSizeContext.Provider>
-//   );
-// }
-
-// // Assign propTypes (remains unchanged)
-// CrosswordGrid.propTypes = CrosswordGridPropTypes;
-
-// // Export the type for other components
-// export type CrosswordGridProps = ICrosswordGridProps;
-
 import React, { useContext, useRef } from "react";
 import PropTypes, { InferProps } from "prop-types";
 import styled, { ThemeContext } from "styled-components";
-import Cell from "./Cell";
+// NOTE: Cell.tsx is no longer imported or used in this refactored version
 import { getCellKey } from "../../../lib/utils";
 import { CrosswordContext } from "./context";
-import { InputRefCallback } from "../../types";
+import { InputRefCallback, UsedCellData } from "../../types"; // Added UsedCellData
 
 const SvgWrapper = styled.div`
   position: relative;
@@ -323,10 +21,12 @@ const StyledSvg = styled.svg`
   height: 100%;
 `;
 
+// Define PropTypes for the props accepted by this component
 const CrosswordGridPropTypes = {
   onInputRefChange: PropTypes.func,
 };
 
+// Define the TypeScript interface for the props
 interface ICrosswordGridProps
   extends InferProps<typeof CrosswordGridPropTypes> {
   onInputRefChange?: InputRefCallback;
@@ -335,34 +35,76 @@ interface ICrosswordGridProps
 export default function CrosswordGrid({
   onInputRefChange,
 }: ICrosswordGridProps) {
+  // Get values from CrosswordContext
   const {
     rows,
     cols,
     gridData,
-    cellCompletionStatus,
+    cellCompletionStatus, // Get completion status map
     handleInputKeyDown,
     handleInputChange,
-    handleCellClick,
+    handleCellClick, // Get the handler for cell clicks
     handleInputClick,
     selectedPosition: { row: focusedRow, col: focusedCol },
     selectedDirection,
     selectedNumber,
   } = useContext(CrosswordContext);
 
+  // Get theme from ThemeContext
   const finalTheme = useContext(ThemeContext);
+  // Setup ref for the hidden input
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Percent sizes for the input overlay
+  // Calculate percentage sizes for the hidden input overlay
   const cellWidthPct = 100 / cols;
   const cellHeightPct = 100 / rows;
 
-  // SVG viewBox maps directly to #columns × #rows
+  // SVG viewBox maps directly to grid dimensions (#columns × #rows)
   const viewBox = `0 0 ${cols} ${rows}`;
+
+  // --- Helper function to determine cell background fill ---
+  const getCellFill = (
+    isFocused: boolean,
+    isHighlighted: boolean,
+    status?: { completed: boolean; stage: number }
+  ): string => {
+    if (status?.completed) {
+      // Use stage-based completion colors
+      switch (status.stage) {
+        case 1: return finalTheme?.completionStage1Background ?? '#2196F3';
+        case 2: return finalTheme?.completionStage2Background ?? '#4CAF50';
+        case 3: return finalTheme?.completionStage3Background ?? '#FFC107';
+        case 4: return finalTheme?.completionStage4Background ?? '#FF9800';
+        case 5: return finalTheme?.completionStage5Background ?? '#F44336';
+        default: return finalTheme?.completionStage1Background ?? '#2196F3';
+      }
+    }
+    if (isFocused) {
+      return finalTheme?.focusBackground ?? "#e3f2fd";
+    }
+    if (isHighlighted) {
+      return finalTheme?.highlightBackground ?? "#f5f9ff";
+    }
+    return finalTheme?.cellBackground ?? "#fffaf0";
+  };
+
+  // --- Helper function to determine cell text color ---
+  const getTextColor = (
+    status?: { completed: boolean; stage: number }
+  ): string => {
+    if (status?.completed) {
+       // Use white text for completed stages for better contrast
+      return '#FFFFFF';
+    }
+    // Use default text color otherwise
+    return finalTheme?.textColor ?? "#2c3e50";
+  };
+
 
   return (
     <SvgWrapper>
       <StyledSvg viewBox={viewBox} preserveAspectRatio="xMidYMid meet">
-        {/* full‑grid background */}
+        {/* full‐grid background */}
         <rect
           x={0}
           y={0}
@@ -371,35 +113,48 @@ export default function CrosswordGrid({
           fill={finalTheme?.gridBackground ?? "transparent"}
         />
 
-        {/* each cell is a 1×1 square at (col,row) */}
+        {/* Render each cell as a 1×1 square at (col,row) */}
         {gridData.flatMap((rowData, row) =>
           rowData.map((cellData, col) => {
+            // Skip unused cells
             if (!cellData.used) return null;
 
+            // Determine focus and highlight states
             const isFocused = row === focusedRow && col === focusedCol;
             const isHighlighted =
               !!selectedNumber &&
               cellData[selectedDirection] === selectedNumber;
 
+            // Get completion status for the cell
             const key = getCellKey(row, col);
-            const completion = cellCompletionStatus?.get(key);
+            const completionStatus = cellCompletionStatus?.get(key);
 
+            // Determine fill and text colors based on state
+            const cellFill = getCellFill(isFocused, isHighlighted, completionStatus);
+            const textColor = getTextColor(completionStatus);
+
+            // --- FIX 1: Added onClick handler to the <g> element ---
             return (
-              <g key={key} transform={`translate(${col}, ${row})`}>
+              <g
+                key={key}
+                transform={`translate(${col}, ${row})`}
+                onClick={() => handleCellClick(cellData as UsedCellData)} // Pass cellData to handler
+                style={{ cursor: 'default' }} // Keep cursor style
+              >
                 <rect
                   x={0}
                   y={0}
                   width={1}
                   height={1}
-                  fill={finalTheme?.cellBackground ?? "#fffaf0"}
+                  // --- FIX 4: Use getCellFill helper ---
+                  fill={cellFill}
                   stroke={finalTheme?.cellBorder ?? "#dde1e4"}
                   strokeWidth={0.02}
+                  // --- FIX 3: Apply classes correctly for potential CSS styling ---
+                  // Note: Ensure CSS rules for .focused and .highlighted target the rect
+                  // e.g., g:has(rect.focused) rect { /* styles */ } or just style based on fill
                   className={
-                    isFocused
-                      ? "focused"
-                      : isHighlighted
-                      ? "highlighted"
-                      : undefined
+                    isFocused ? "focused" : isHighlighted ? "highlighted" : ""
                   }
                 />
 
@@ -411,6 +166,7 @@ export default function CrosswordGrid({
                     fontSize={0.3}
                     textAnchor="start"
                     dominantBaseline="hanging"
+                    // Ensure number color is not affected by completion status
                     fill={finalTheme?.numberColor ?? "#7f8c8d"}
                   >
                     {cellData.number}
@@ -423,11 +179,13 @@ export default function CrosswordGrid({
                   y={0.5}
                   fontSize={0.7}
                   textAnchor="middle"
-                  dominantBaseline="middle"
-                  className="guess-text"
-                  fill={finalTheme?.textColor ?? "#2c3e50"}
+                  dy="0.34em"
+                  className="guess-text" // Keep class for potential styling
+                  // --- FIX 4 (cont.): Use getTextColor helper ---
+                  fill={textColor}
                 >
-                  {completion || ""}
+                  {/* --- FIX 2: Display cellData.guess --- */}
+                  {cellData.guess || ""}
                 </text>
               </g>
             );
@@ -435,9 +193,10 @@ export default function CrosswordGrid({
         )}
       </StyledSvg>
 
-      {/* hidden input over the “active” cell, purely percent‑based */}
+      {/* Hidden input remains the same, positioned over the "active" cell */}
       <input
         ref={(node) => {
+          // Assign to local ref AND call the callback prop
           inputRef.current = node;
           onInputRefChange?.(node);
         }}
@@ -446,7 +205,7 @@ export default function CrosswordGrid({
         onClick={handleInputClick}
         onKeyDown={handleInputKeyDown}
         onChange={handleInputChange}
-        value=""
+        value="" // Input is controlled via keydown
         autoComplete="off"
         spellCheck="false"
         autoCorrect="off"
@@ -471,5 +230,6 @@ export default function CrosswordGrid({
   );
 }
 
+// Assign PropTypes and export Props type
 CrosswordGrid.propTypes = CrosswordGridPropTypes;
 export type CrosswordGridProps = ICrosswordGridProps;

@@ -51,9 +51,6 @@ export const TimerDisplay: React.FC<TimerDisplayProps> = ({
 }) => {
   // Access theme directly to check if it's available
   const theme = useContext(ThemeContext);
-  console.log('Current stage:', currentStage);
-  console.log('Theme access in component:', theme);
-  console.log('Theme stage1 color:', theme?.completionStage1Background);
   
   const formattedTime = formatTime(elapsedTime);
   

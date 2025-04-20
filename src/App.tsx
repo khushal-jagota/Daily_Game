@@ -73,14 +73,12 @@ function App() {
   const inputRefCallback = useCallback<InputRefCallback>((node) => {
     // Store the input element reference in state
     setInputElement(node);
-    console.log('Input Element Ref received in App:', node);
   }, []);
   
   // Effect to focus the hidden input when selection changes or game starts/resumes
   useEffect(() => {
     // Only focus if the game is active and we have the input element reference
     if (isGameStarted && !gameState.isGameComplete && inputElement) {
-      console.log('Selection changed or game started, focusing input:', inputElement); // Temporary log
       inputElement.focus({ preventScroll: true }); // Use preventScroll to avoid page jumps
     }
     // Dependencies: We want this effect to run whenever the selected cell changes,
@@ -95,9 +93,7 @@ function App() {
   
   // For testing: log the timer values to the console
   useEffect(() => {
-    if (isGameStarted) {
-      console.log(`Elapsed time: ${elapsedTime}s, Current stage: ${currentStage}`);
-    }
+    // Removed console log for timer values
   }, [elapsedTime, currentStage, isGameStarted]);
   
   // Create a wrapper for handleGuessInput that passes the current stage
