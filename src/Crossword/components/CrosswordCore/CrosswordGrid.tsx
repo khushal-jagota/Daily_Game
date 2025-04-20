@@ -158,14 +158,15 @@ export default function CrosswordGrid({
                   }
                 />
 
-                {/* clue number */}
+
                 {cellData.number && (
                   <text
-                    x={0.05}
-                    y={0.05}
+                    x={0.05} // Keep horizontal position near left
+                    y={0.05} // Keep vertical anchor point near top
                     fontSize={0.3}
                     textAnchor="start"
-                    dominantBaseline="hanging"
+                    dominantBaseline="auto" // Change baseline to 'auto' (or 'middle')
+                    dy="0.85em" // Add dy for vertical adjustment (START EXPERIMENTING HERE)
                     // Ensure number color is not affected by completion status
                     fill={finalTheme?.numberColor ?? "#7f8c8d"}
                   >
