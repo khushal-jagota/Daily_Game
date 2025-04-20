@@ -115,6 +115,42 @@ declare module 'styled-components' {
      * Red background for stage 5 completion (>180s)
      */
     completionStage5Background?: string;
+
+    // Virtual Keyboard theme properties
+    /**
+     * Background color for the keyboard container
+     */
+    keyboardBackground?: string;
+
+    /**
+     * Background color for standard letter keys
+     */
+    keyBackground?: string;
+
+    /**
+     * Text color for keys
+     */
+    keyColor?: string;
+
+    /**
+     * Background color for special keys like backspace and enter
+     */
+    specialKeyBackground?: string;
+
+    /**
+     * Border color for keys
+     */
+    keyBorderColor?: string;
+
+    /**
+     * Border radius for keys
+     */
+    keyBorderRadius?: string;
+
+    /**
+     * Font size for keys
+     */
+    keyFontSize?: string;
   }
 
   // Extending DefaultTheme with our AppTheme

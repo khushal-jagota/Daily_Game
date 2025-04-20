@@ -9,6 +9,11 @@ export type EnhancedProps<T, O> = OverrideProps<InferProps<T>, O>;
 
 export type Direction = 'across' | 'down';
 
+/**
+ * A callback type for receiving input element references
+ */
+export type InputRefCallback = (instance: HTMLInputElement | null) => void;
+
 export interface GridPosition {
   /** The 0-indexed row for the position. */
   row: number;

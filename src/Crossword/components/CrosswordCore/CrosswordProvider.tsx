@@ -29,6 +29,7 @@ import {
   CellData,
   UnusedCellData,
   ClueTypeOriginal, // Import ClueTypeOriginal
+  InputRefCallback, // Add InputRefCallback import
 } from '../../types'; // Assuming types are in ../../types/index.ts
 import {
   bothDirections,
@@ -217,6 +218,9 @@ ADDED: callback function called when a cell is selected
   
   /** Map of cell completion status for visual feedback. */
   cellCompletionStatus: PropTypes.instanceOf(Map),
+
+  /** Callback for receiving input element reference. */
+  onInputRefChange: PropTypes.func,
 };
 
 export type CrosswordProviderProps = EnhancedProps<
@@ -371,6 +375,9 @@ export type CrosswordProviderProps = EnhancedProps<
     
     /** Map of cell completion status for visual feedback. */
     cellCompletionStatus?: Map<string, { completed: boolean; stage: number }>;
+
+    /** Callback for receiving input element reference. */
+    onInputRefChange?: InputRefCallback;
   }
 >;
 
@@ -453,6 +460,9 @@ const CrosswordProvider = React.forwardRef<
       onGuessAttempt,
       gridData,
       cellCompletionStatus,
+
+      // NEW Props (TypeScript) from Step 2.2.1
+      onInputRefChange,
     },
     ref
   ) => {

@@ -33,6 +33,15 @@ export const crosswordTheme = {
   completionStage3Background: '#FFC107', // Yellow (71-120s)
   completionStage4Background: '#FF9800', // Orange (121-180s)
   completionStage5Background: '#F44336', // Red (>180s)
+  
+  // Virtual Keyboard styling
+  keyboardBackground: '#fffaf0',     // Match gridBackground 
+  keyBackground: '#ffffff',          // White for standard keys
+  keyColor: '#2c3e50',               // Match textColor
+  specialKeyBackground: '#e3f2fd',   // Match focusBackground for special keys
+  keyBorderColor: '#dde1e4',         // Match cellBorder
+  keyBorderRadius: '4px',            // Slightly rounded corners
+  keyFontSize: '1rem',               // Standard font size
 };
 
 // For backward compatibility

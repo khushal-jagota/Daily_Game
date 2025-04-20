@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useGameStateManager } from './GameFlow/state/useGameStateManager'
 import { AppWrapper, CrosswordArea, ClueArea, KeyboardArea, TimerBarContainer, KeyboardPlaceholder } from './Layout/components'
 import ThemedCrossword from './Crossword/components/ThemedCrossword'
@@ -8,6 +8,8 @@ import useTimer from './Timer/hooks/useTimer'
 import TimerDisplay from './Timer/components/TimerDisplay'
 import StageProgressBar from './Timer/components/StageProgressBar'
 import { crosswordTheme } from './Crossword/styles/CrosswordStyles'
+import { InputRefCallback } from './Crossword/types'
+import VirtualKeyboard from './Keyboard/components/VirtualKeyboard'
 
 // Styled Start Game button
 const StartButton = styled.button`
@@ -51,36 +53,45 @@ const InitialScreenText = styled.p`
   max-width: 600px;
 `;
 
-// Debug panel for completedWords
-const DebugPanel = styled.div`
-  position: fixed;
-  bottom: 10px;
-  right: 10px;
-  background-color: rgba(0, 0, 0, 0.8);
-  color: white;
-  padding: 10px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-family: monospace;
-  max-width: 300px;
-  max-height: 200px;
-  overflow: auto;
-  z-index: 1000;
-`;
-
 function App() {
   // Control game start state
   const [isGameStarted, setIsGameStarted] = useState(false);
 
   // Use the game state manager hook to get the state and actions
   const gameState = useGameStateManager();
-  (window as any).debugGameState = gameState;
   
   // Use timer hook for tracking elapsed time and stage - updated to preserve time when game is complete
   const { elapsedTime, currentStage, stageTimeRemainingRatio } = useTimer({ 
     isGameActive: isGameStarted && !gameState.isGameComplete,
     isGameComplete: isGameStarted && gameState.isGameComplete
   });
+  
+  // State to hold the input element reference for keyboard integration
+  const [inputElement, setInputElement] = useState<HTMLInputElement | null>(null);
+  
+  // Callback function to receive the input element reference
+  const inputRefCallback = useCallback<InputRefCallback>((node) => {
+    // Store the input element reference in state
+    setInputElement(node);
+    console.log('Input Element Ref received in App:', node);
+  }, []);
+  
+  // Effect to focus the hidden input when selection changes or game starts/resumes
+  useEffect(() => {
+    // Only focus if the game is active and we have the input element reference
+    if (isGameStarted && !gameState.isGameComplete && inputElement) {
+      console.log('Selection changed or game started, focusing input:', inputElement); // Temporary log
+      inputElement.focus({ preventScroll: true }); // Use preventScroll to avoid page jumps
+    }
+    // Dependencies: We want this effect to run whenever the selected cell changes,
+    // the input element reference becomes available, or the game start/complete status changes.
+  }, [
+    gameState.selectedRow, 
+    gameState.selectedCol, 
+    inputElement, 
+    isGameStarted, 
+    gameState.isGameComplete 
+  ]);
   
   // For testing: log the timer values to the console
   useEffect(() => {
@@ -108,10 +119,33 @@ function App() {
     setIsGameStarted(true);
   };
 
-  // Prepare completedWords data for display
-  const completedWordsDebug = [...gameState.completedWords.entries()].map(
-    ([wordId, data]) => `${wordId}: stage=${data.stage}`
-  ).join('\n');
+  // Handle virtual keyboard key presses
+  const handleVirtualKeyPress = (button: string) => {
+    let stateUpdated = false;
+    
+    // Handle different button types
+    if (button === '{bksp}') {
+      // Handle backspace key
+      gameState.handleBackspace();
+      stateUpdated = true;
+    } else if (button === '{enter}') {
+      // In the future, enter key could trigger word submission or other actions
+      // For now, we're not implementing specific functionality for it
+    } else {
+      // Handle letter keys - check if we have valid selection first
+      if (gameState.selectedRow !== null && gameState.selectedCol !== null) {
+        gameState.handleGuessInput(gameState.selectedRow, gameState.selectedCol, button.toUpperCase(), currentStage);
+        stateUpdated = true;
+      }
+    }
+    
+    // If the state was updated, refocus the hidden input element
+    if (stateUpdated && inputElement) {
+      setTimeout(() => {
+        inputElement?.focus({ preventScroll: true });
+      }, 0);
+    }
+  };
 
   // --- Render ---
   return (
@@ -132,7 +166,10 @@ function App() {
         {isGameStarted ? (
           <>
             <CrosswordArea>
-              <ThemedCrossword gameState={effectiveGameState} />
+              <ThemedCrossword 
+                gameState={effectiveGameState} 
+                onInputRefChange={inputRefCallback}
+              />
             </CrosswordArea>
             <ClueArea>
               <ClueVisualiser
@@ -143,18 +180,9 @@ function App() {
               />
             </ClueArea>
             <KeyboardArea>
-              {/* Keyboard placeholder for testing visibility */}
-              <KeyboardPlaceholder aria-hidden="true">Keyboard Placeholder</KeyboardPlaceholder>
+              {/* Pass the handler to the VirtualKeyboard */}
+              <VirtualKeyboard onKeyPress={handleVirtualKeyPress} />
             </KeyboardArea>
-            
-            {/* Debug panel to show completedWords */}
-            <DebugPanel>
-              <div>
-                {gameState.isGameComplete && <span>GAME COMPLETE!</span>}
-              </div>
-              <div style={{ marginTop: '8px' }}>Completed Words:</div>
-              <pre>{completedWordsDebug || '(none)'}</pre>
-            </DebugPanel>
           </>
         ) : (
           <InitialScreen>

@@ -9,7 +9,7 @@ To implement a "Share" button, appearing upon game completion, that generates a 
 
 ## 2. Prerequisites
 
-*   Completed Phase 4.5 codebase.
+*   Completed Phase 4.75 codebase.
 *   Access to `puzzleData`, `gridData`, `completedWords`, final `elapsedTime`, and `theme` object in `App.tsx` scope upon game completion.
 
 ## 3. Implementation Steps

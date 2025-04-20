@@ -4,7 +4,7 @@ import styled from 'styled-components';
 export const AppWrapper = styled.div`
   display: grid;
   /* Explicit, valid grid‑template‑rows value: */
-  grid-template-rows: auto 1fr max-content minmax(clamp(6rem,20vh,10rem), auto);
+  grid-template-rows: auto 1fr max-content minmax(clamp(13rem,20vh,15rem), auto);
 
   /* Use svh with dvh fallback for viewport height */
   min-height: 100dvh; 
@@ -46,13 +46,20 @@ export const ClueArea = styled.div`
 
 // Keyboard area with padding-based height
 export const KeyboardArea = styled.div`
-  padding: 1rem;
-  min-height: 8rem;
-  background-color: ${props => props.theme.gridBackground || '#EEE'};
+  padding: 0.75rem 0.1rem;
+  background-color: ${props => props.theme.keyboardBackground || props.theme.gridBackground || '#EEE'};
   overflow: hidden;
   display: flex;
   justify-content: center;
   align-items: center;
+  
+  @media (max-width: 768px) {
+    padding: 0.5rem 0.1rem;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 0.25rem 0;
+  }
 `;
 
 // Temporary placeholder for keyboard - will be removed when actual keyboard is implemented

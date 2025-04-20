@@ -1,8 +1,5 @@
 import React, {
-  useCallback,
   useContext,
-  useEffect,
-  // useImperativeHandle,
   useMemo,
   useRef,
 } from 'react';
@@ -14,7 +11,7 @@ import Cell from './Cell'; // Assuming Cell component is in the same directory
 import { getCellKey } from '../../../lib/utils'; // Import getCellKey utility
 
 import { CrosswordContext, CrosswordSizeContext } from './context';
-import { FocusHandler } from '../../types'; // Assuming types are in ../../types
+import { InputRefCallback } from '../../types'; // Removed FocusHandler import
 
 // GridWrapper styling remains unchanged
 const GridWrapper = styled.div.attrs((/* props */) => ({
@@ -27,17 +24,21 @@ const GridWrapper = styled.div.attrs((/* props */) => ({
   flex: 2 1 50%;
 `;
 
-// PropTypes remain unchanged (empty as theme is from context)
+// Update PropTypes to include onInputRefChange
 const CrosswordGridPropTypes = {
   // theme prop removed since it's now consumed from context
+  onInputRefChange: PropTypes.func,
 };
 
-export type CrosswordGridProps = InferProps<typeof CrosswordGridPropTypes>;
+// Define an explicit interface that extends the inferred props
+interface ICrosswordGridProps extends InferProps<typeof CrosswordGridPropTypes> {
+  onInputRefChange?: InputRefCallback;
+}
 
 /**
  * The rendering component for the crossword grid itself.
  */
-export default function CrosswordGrid() {
+export default function CrosswordGrid({ onInputRefChange }: ICrosswordGridProps) {
   // Destructure necessary values from CrosswordContext
   // Renamed context props locally for clarity (focusedRow, focusedCol)
   const {
@@ -49,30 +50,17 @@ export default function CrosswordGrid() {
     handleInputChange,
     handleCellClick, // The context function itself
     handleInputClick,
-    registerFocusHandler,
     focused, // The internal focus state of the hidden input
     selectedPosition: { row: focusedRow, col: focusedCol }, // The selected cell coordinates
     selectedDirection: currentDirection, // The selected direction
     selectedNumber: currentNumber, // The selected clue number
   } = useContext(CrosswordContext);
 
+  // Keep inputRef for the callback pattern
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Get the theme directly from context
   const finalTheme = useContext(ThemeContext);
-
-  // focus handler for the hidden input
-  const focus = useCallback<FocusHandler>(() => {
-    inputRef.current?.focus();
-  }, []);
-
-  // Register focus handler with the provider
-  useEffect(() => {
-    registerFocusHandler(focus);
-    return () => {
-      registerFocusHandler(null);
-    };
-  }, [focus, registerFocusHandler]);
 
   // Calculate sizing based on cell size (remains unchanged)
   const cellSize = 10;
@@ -183,19 +171,21 @@ export default function CrosswordGrid() {
           </svg>
           {/* Hidden input field for capturing keyboard events */}
           <input
-            ref={inputRef}
+            ref={(node: HTMLInputElement | null) => {
+              // Keep the inputRef for local use
+              inputRef.current = node;
+              // Call the callback passed from App.tsx if provided
+              onInputRefChange?.(node);
+            }}
             aria-label="crossword-input"
-            type="text" // Changed from text to allow single character input capture easily
-            onClick={handleInputClick} // Handles direction toggle on click
-            onKeyDown={handleInputKeyDown} // Handles arrow keys, backspace, delete, chars
-            onChange={handleInputChange} // Handles bulk paste? (May need review later)
-            value="" // Keep input empty, interaction is via keydown mostly
+            type="text"
+            onClick={handleInputClick}
+            onKeyDown={handleInputKeyDown}
+            onChange={handleInputChange}
+            value=""
             autoComplete="off"
             spellCheck="false"
             autoCorrect="off"
-            // Making it readOnly helps prevent mobile keyboard issues,
-            // but might interfere; monitor behavior. Consider removing if problematic.
-             readOnly={true}
             style={inputStyle}
           />
         </div>
@@ -206,3 +196,6 @@ export default function CrosswordGrid() {
 
 // Assign propTypes (remains unchanged)
 CrosswordGrid.propTypes = CrosswordGridPropTypes;
+
+// Export the type for other components
+export type CrosswordGridProps = ICrosswordGridProps;

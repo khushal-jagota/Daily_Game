@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef, useMemo } from 'react'; // Ad
 import { prototypePuzzle } from '../../Puzzle/data/themedPuzzles';
 import { CluesInput, Direction, GridData, CellData, UsedCellData } from '../../Crossword/types';
 import { otherDirection, createGridData } from '../../Crossword/components/CrosswordCore/util';
-import { produce } from 'immer';
+import { produce, WritableDraft } from 'immer';
 
 // Interface for word completion data
 interface CompletionData {
@@ -400,48 +400,93 @@ export function useGameStateManager() {
   ]);
 
   /**
-   * Handle backspace key (clear current cell if editable, move to previous)
+   * Handle backspace key (clear current cell if it has a guess, otherwise move to previous and clear)
    */
   const handleBackspace = useCallback(() => {
     // console.log(`[handleBackspace] Called at (${selectedRow},${selectedCol})`); // Less noisy
 
-    const editable = isEditableCell(selectedRow, selectedCol);
-    // console.log(`[handleBackspace] Cell is editable: ${editable}`); // Less noisy
-
-    if (editable) {
-      setGridData(produce(draft => {
-        if (draft[selectedRow]?.[selectedCol]?.used) {
-          // console.log(`[handleBackspace] Clearing cell (${selectedRow},${selectedCol})`); // Less noisy
-          draft[selectedRow][selectedCol].guess = '';
-        }
-      }));
-      // *** NO COMPLETION LOGIC NEEDED HERE ***
-    } else {
-      console.log(`[handleBackspace] Cell (${selectedRow},${selectedCol}) is locked. Deletion blocked.`);
+    // Get current cell data to check if it has a guess
+    const currentCell = getCellData(selectedRow, selectedCol);
+    const hasGuess = !!(currentCell?.used && currentCell.guess);
+    
+    if (hasGuess) {
+      // If current cell has content, check if it's editable
+      const editable = isEditableCell(selectedRow, selectedCol);
+      
+      if (editable) {
+        // Clear the current cell's guess without moving
+        setGridData(produce(draft => {
+          if (draft[selectedRow]?.[selectedCol]?.used) {
+            // console.log(`[handleBackspace] Clearing cell (${selectedRow},${selectedCol})`); // Less noisy
+            draft[selectedRow][selectedCol].guess = '';
+          }
+        }));
+      } else {
+        console.log(`[handleBackspace] Cell (${selectedRow},${selectedCol}) is locked. Deletion blocked.`);
+      }
+      
+      // Return early - don't move to previous cell when current cell had content
+      return;
     }
-
-    // Move to previous cell regardless of whether current cell was cleared
-    const prevCellData = calculateAndValidateTargetCell(selectedRow, selectedCol, currentDirection, -1);
-
-    if (prevCellData) {
-      let prevRow = selectedRow;
-      let prevCol = selectedCol;
+    
+    // Iterative backward search for the first editable cell
+    let prevRow = selectedRow;
+    let prevCol = selectedCol;
+    let foundEditableCell = false;
+    let targetCellData: UsedCellData | null = null;
+    
+    // Keep moving backward until we find an editable cell or hit the boundary
+    while (!foundEditableCell) {
+      // Calculate the coordinates of the next cell backward
       if (currentDirection === 'across') {
         prevCol -= 1;
       } else {
         prevRow -= 1;
       }
-
-      let newDirection = currentDirection;
-      if (!prevCellData[currentDirection]) { // Auto-switch direction if needed
-          const otherDir = otherDirection(currentDirection);
-          if (prevCellData[otherDir]) {
-              newDirection = otherDir;
-          } else {
-              return; // Should not happen if prevCellData is valid
-          }
+      
+      // Check if we're out of bounds
+      if (prevRow < 0 || prevCol < 0 || 
+          prevRow >= gridData.length || prevCol >= gridData[0].length) {
+        // No more cells in this direction
+        break;
       }
-      const newNumber = prevCellData[newDirection] ?? '';
+      
+      // Get the cell data
+      const cellData = getCellData(prevRow, prevCol);
+      if (!cellData?.used) {
+        // Skip unused cells
+        continue;
+      }
+      
+      // Check if this cell is editable
+      if (isEditableCell(prevRow, prevCol)) {
+        foundEditableCell = true;
+        targetCellData = cellData as UsedCellData;
+        break;
+      }
+    }
+    
+    // If we found an editable cell, update it and move there
+    if (foundEditableCell && targetCellData) {
+      // Clear the target cell's guess
+      setGridData(produce(draft => {
+        const cell = draft[prevRow]?.[prevCol];
+        if (cell?.used) {
+          // console.log(`[handleBackspace] Clearing previous cell (${prevRow},${prevCol})`); // Less noisy
+          (cell as WritableDraft<UsedCellData>).guess = '';
+        }
+      }));
+      
+      // Determine direction and number for the target cell
+      let newDirection = currentDirection;
+      if (!targetCellData[currentDirection]) { // Auto-switch direction if needed
+        const otherDir = otherDirection(currentDirection);
+        if (targetCellData[otherDir]) {
+          newDirection = otherDir;
+        }
+      }
+      
+      const newNumber = targetCellData[newDirection] ?? '';
       updateSelectionState(prevRow, prevCol, newDirection, newNumber);
     }
 
@@ -451,8 +496,10 @@ export function useGameStateManager() {
     selectedCol,
     currentDirection,
     setGridData,
-    updateSelectionState
-    // calculateAndValidateTargetCell is used internally
+    updateSelectionState,
+    getCellData,
+    gridData
+    // calculateAndValidateTargetCell is no longer used
   ]);
 
   /**
