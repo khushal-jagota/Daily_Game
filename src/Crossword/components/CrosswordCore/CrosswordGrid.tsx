@@ -166,7 +166,7 @@ export default function CrosswordGrid({
                     fontSize={0.3}
                     textAnchor="start"
                     dominantBaseline="auto" // Change baseline to 'auto' (or 'middle')
-                    dy="0.85em" // Add dy for vertical adjustment (START EXPERIMENTING HERE)
+                    dy="0.9em" // Add dy for vertical adjustment (START EXPERIMENTING HERE)
                     // Ensure number color is not affected by completion status
                     fill={finalTheme?.numberColor ?? "#7f8c8d"}
                   >
