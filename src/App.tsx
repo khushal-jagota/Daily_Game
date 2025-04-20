@@ -44,12 +44,13 @@ const InitialScreen = styled.div`
   height: 100%;
   padding: 20px;
   text-align: center;
+  background-color: #121212;
 `;
 
 const InitialScreenText = styled.p`
   margin-bottom: 20px;
   font-size: 18px;
-  color: #333;
+  color: #EAEAEA;
   max-width: 600px;
 `;
 

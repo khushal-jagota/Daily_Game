@@ -5,26 +5,26 @@ export const crosswordTheme = {
   // Core theme properties
   allowNonSquare: false,
   columnBreakpoint: '768px',
-  gridBackground: '#fffaf0',
-  cellBackground: '#fffaf0',
-  cellBorder: '#dde1e4',
-  textColor: '#2c3e50',
-  numberColor: '#7f8c8d',
-  focusBackground: '#e3f2fd',
-  highlightBackground: '#f5f9ff',
+  gridBackground: '#121212',
+  cellBackground: '#121212',
+  cellBorder: '#444444',
+  textColor: '#EAEAEA',
+  numberColor: '#A0A0A0',
+  focusBackground: '#2a2a2a',
+  highlightBackground: '#1e1e1e',
   bookColor: undefined, // Optional property
   
   // Correct answer styling
-  correctBackground: '#e6f7e9', // Light green for correct answers
-  correctColor: '#27ae60',      // Green text for correct answers
-  wordCorrectBackground: '#FFD700', // Bright gold background for correct words
-  wordCorrectColor: '#B8860B',      // Dark gold text for correct words
+  correctBackground: '#1e3e20', // Darker green for correct answers
+  correctColor: '#4CAF50',      // Green text for correct answers
+  wordCorrectBackground: '#866500', // Darker gold background for correct words
+  wordCorrectColor: '#FFD700',      // Brighter gold text for correct words
   
   // Completion styling
-  completionBackground: '#b3e0ff', // Light blue for completed words
+  completionBackground: '#0d3a5c', // Darker blue for completed words
   
   // Progress tracking
-  progressBarBackground: '#e9ecef', // Light gray background for progress bar
+  progressBarBackground: '#2a2a2a', // Dark gray background for progress bar
   progressBarFill: '#28a745',       // Green fill for progress bar
   
   // Timer completion stage colors
@@ -35,11 +35,11 @@ export const crosswordTheme = {
   completionStage5Background: '#F44336', // Red (>180s)
   
   // Virtual Keyboard styling
-  keyboardBackground: '#fffaf0',     // Match gridBackground 
-  keyBackground: '#ffffff',          // White for standard keys
-  keyColor: '#2c3e50',               // Match textColor
-  specialKeyBackground: '#e3f2fd',   // Match focusBackground for special keys
-  keyBorderColor: '#dde1e4',         // Match cellBorder
+  keyboardBackground: '#121212',     // Match gridBackground 
+  keyBackground: '#616161',          // Grey for standard keys
+  keyColor: '#FFFFFF',               // White text for keys
+  specialKeyBackground: '#616161',   // Same as keyBackground for uniform look
+  keyBorderColor: '#333333',         // Dark grey borders
   keyBorderRadius: '4px',            // Slightly rounded corners
   keyFontSize: '1rem',               // Standard font size
 };
@@ -287,16 +287,16 @@ export const GameContainer = styled.div`
 
 export const Title = styled.h1`
   font-size: 2rem;
-  color: #2c3e50;
+  color: ${props => props.theme.textColor || '#EAEAEA'};
   margin-bottom: 2rem;
   text-align: center;
 `;
 
 export const CurrentClueContainer = styled.div`
-  background: white;
+  background: #1a1a1a;
   border-radius: 12px;
   padding: 1.5rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
   margin-top: 1.5rem;
   min-height: 100px;
   display: flex;
@@ -306,7 +306,7 @@ export const CurrentClueContainer = styled.div`
 
 export const ClueDirection = styled.div`
   font-size: 0.9rem;
-  color: #7f8c8d;
+  color: ${props => props.theme.numberColor || '#A0A0A0'};
   text-transform: uppercase;
   letter-spacing: 1px;
   margin-bottom: 0.5rem;
@@ -314,7 +314,7 @@ export const ClueDirection = styled.div`
 
 export const ClueContent = styled.div`
   font-size: 1.15rem;
-  color: #2c3e50;
+  color: ${props => props.theme.textColor || '#EAEAEA'};
   font-weight: 400;
   line-height: 1.4;
   word-wrap: break-word;
@@ -392,7 +392,7 @@ export const CurrentWordContainer = styled.div`
 
 export const CurrentWordTitle = styled.h2`
   font-size: 1.2rem;
-  color: #2c3e50;
+  color: ${props => props.theme.textColor || '#EAEAEA'};
   margin-bottom: 1rem;
   text-align: center;
 `;

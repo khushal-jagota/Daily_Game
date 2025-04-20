@@ -24,12 +24,13 @@ export const AppWrapper = styled.div`
   padding-left: var(--safe-area-inset-left);
   gap: 0; /* Explicitly no gap between grid rows */
   overflow: hidden; /* Prevent AppWrapper itself from scrolling */
+  background-color: ${(props) => props.theme.gridBackground || "#121212"};
 `;
 
 // Top banner area with padding-based height
 export const Banner = styled.div`
   padding: 0.75rem 1rem;
-  background-color: #ccc;
+  background-color: #1a1a1a;
 `;
 
 // Flexible middle area that contains the crossword grid
@@ -43,7 +44,7 @@ export const CrosswordArea = styled.div`
 
 // Clue area with padding-based height
 export const ClueArea = styled.div`
-  background-color: ${(props) => props.theme.gridBackground || "transparent"};
+  background-color: ${(props) => props.theme.gridBackground || "#121212"};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -85,4 +86,5 @@ export const TimerBarContainer = styled.div<{ $visible?: boolean }>`
   gap: 1rem;
   justify-content: space-between;
   width: 100%;
+  background-color: ${(props) => props.theme.gridBackground || "#121212"};
 `;
