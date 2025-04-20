@@ -209,6 +209,8 @@ export default function CrosswordGrid({
         autoComplete="off"
         spellCheck="false"
         autoCorrect="off"
+        readOnly={true} // Prevent mobile keyboard from showing
+        inputMode="none" // Explicitly prevent virtual keyboard on mobile
         style={{
           position: "absolute",
           top: `calc(${focusedRow * cellHeightPct}% + 2px)`,
