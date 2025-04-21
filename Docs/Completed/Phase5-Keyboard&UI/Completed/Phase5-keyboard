@@ -1,6 +1,6 @@
 # Phase 5 Plan: Virtual Keyboard Implementation (Revised - Callback Ref Strategy)
 
-**Document Version:** 2.0
+**Document Version:** 2.1 (Includes Post-Implementation Refinements Appendix)
 **Date:** [Current Date]
 
 ## 1. Overall Goal
@@ -219,16 +219,16 @@ To integrate the `react-simple-keyboard` library as the primary input method for
 
 ### Step 5.9: Define Keyboard Layout (Letters & Backspace)
 
-*   **Goal:** Configure the keyboard layout to show only standard letter keys (QWERTY recommended) and a Backspace key.
+*   **Goal:** Configure the keyboard layout to show only standard letter keys (QWERTY recommended) and a Backspace key. *(Scope updated during implementation to include Enter key)*.
 *   **Rationale:** Provides only the necessary keys for crossword input.
 *   **Integration Steps:**
-    1.  In `VirtualKeyboard.tsx`, define a `layout` configuration object suitable for `react-simple-keyboard`. This object should specify rows of keys, including only A-Z letters and the internal name for backspace (e.g., `{bksp}`).
-    2.  Define a `display` mapping object to map `{bksp}` to a user-visible representation (e.g., '⌫' or 'Backspace').
+    1.  In `VirtualKeyboard.tsx`, define a `layout` configuration object suitable for `react-simple-keyboard`. This object should specify rows of keys, including only A-Z letters, `{bksp}`, and `{enter}`.
+    2.  Define a `display` mapping object to map `{bksp}` and `{enter}` to their user-visible representations (e.g., '⌫', 'ENTER').
     3.  Pass these configuration objects to the `<Keyboard />` component via the `layout` and `display` props.
-*   **Test:** Verify the rendered keyboard now shows only the configured letter rows and a Backspace key with the correct display text/icon.
+*   **Test:** Verify the rendered keyboard now shows only the configured letter rows, Backspace, and Enter keys with the correct display text/icons.
 *   **Checkboxes:**
-    *   [x] `layout` object defined with desired keys (A-Z, {bksp}).
-    *   [x] `display` object defined for `{bksp}` representation.
+    *   [x] `layout` object defined with desired keys (A-Z, {bksp}, {enter}).
+    *   [x] `display` object defined for `{bksp}` and `{enter}` representations.
     *   [x] `layout` and `display` props passed to `<Keyboard />`.
     *   [x] Rendered keyboard shows only the specified keys correctly.
 *   **Notes:**
@@ -246,14 +246,14 @@ To integrate the `react-simple-keyboard` library as the primary input method for
 *   **Integration Steps:**
     1.  Review/Define necessary theme variables in `styled.d.ts` and `CrosswordStyles.ts` for: `keyboardBackground`, `keyBackground`, `keyColor`, `specialKeyBackground`, `keyBorderColor`.
     2.  Define consistent values for `keyBorderRadius` and `keyFontSize`/`keyFontFamily`, aligning with the application's design. Add theme variables if needed.
-    3.  Decide on the styling mechanism: Use `styled-components` to create a wrapper around `VirtualKeyboard`, or generate specific class names to pass via the `theme` and `buttonTheme` props of the `<Keyboard />` component? *Recommendation: Use `theme` and `buttonTheme` props for better library integration.*
+    3.  Decide on the styling mechanism: Use `styled-components` to create a wrapper around `VirtualKeyboard`, or generate specific class names to pass via the `theme` and `buttonTheme` props of the `<Keyboard />` component? *Decision: Use global styles targeting default library classes.*
     4.  If planning to fully override styles, remove the import of the default library CSS (`react-simple-keyboard/build/css/index.css`) from `VirtualKeyboard.tsx`.
 *   **Test:** Review theme files (`styled.d.ts`, `CrosswordStyles.ts`). Ensure the project builds.
 *   **Checkboxes:**
     *   [x] Required theme variables (colors, borders) verified/added.
     *   [x] Consistent `keyBorderRadius` and font style values defined (added to theme if necessary).
-    *   [x] Styling approach chosen (Recommend `theme`/`buttonTheme` props).
-    *   [x] Default library CSS import removed (if applicable).
+    *   [x] Styling approach chosen (Use global styles via `createGlobalStyle`).
+    *   [x] Default library CSS import removed.
 *   **Notes:**
     *   Theme variables have been defined for keyboard styling including background colors, key colors, and special key colors.
     *   The styling approach uses createGlobalStyle from styled-components to target the keyboard classes.
@@ -267,9 +267,9 @@ To integrate the `react-simple-keyboard` library as the primary input method for
 *   **Goal:** Style the `react-simple-keyboard` component to match the application's theme using the defined variables and the chosen global styling strategy.
 *   **Rationale:** Ensures visual consistency between the virtual keyboard and the rest of the application.
 *   **Integration Steps:**
-    1.  Inject the `KeyboardGlobalStyles` component (created in Step 5.10) into the application, typically within `VirtualKeyboard.tsx` or potentially `App.tsx`, ensuring it's within the `ThemeProvider` context.
+    1.  Inject the `KeyboardGlobalStyles` component (created using `createGlobalStyle` in `src/Keyboard/styles/KeyboardStyles.ts`) into the application, typically within `VirtualKeyboard.tsx` or potentially `App.tsx`, ensuring it's within the `ThemeProvider` context.
     2.  Ensure the `<Keyboard />` component in `VirtualKeyboard.tsx` has the base `theme="hg-theme-default"` prop set. This allows the global styles to target the keyboard elements correctly. (Do **not** pass the `buttonTheme` prop).
-    3.  Verify that the CSS rules within `KeyboardGlobalStyles` (`src/Keyboard/styles/KeyboardStyles.ts`) consistently use the application's theme variables (`${props => props.theme.variableName || 'fallback'}`) for all relevant properties (backgrounds, colors, borders, fonts, radius, etc.).
+    3.  Verify that the CSS rules within `KeyboardGlobalStyles` consistently use the application's theme variables (`${props => props.theme.variableName || 'fallback'}`) for all relevant properties (backgrounds, colors, borders, fonts, radius, etc.).
     4.  Ensure the CSS rules within `KeyboardGlobalStyles` specifically target `.hg-theme-default .hg-button.hg-button-enter` and `.hg-theme-default .hg-button.hg-button-bksp` to apply their distinct styles (e.g., `specialKeyBackground`) and layout adjustments (e.g., `flex-grow`).
 *   **Test:** Visually inspect the keyboard. Confirm background, key colors, borders (if any), fonts, and radius match the application theme defined in `CrosswordStyles.ts`. Verify the Enter and Backspace keys have their distinct style and wider layout. Test responsiveness and appearance within the `KeyboardArea`.
 *   **Checkboxes:**
@@ -288,42 +288,80 @@ To integrate the `react-simple-keyboard` library as the primary input method for
 
 ---
 
-### Step 5.12: Implement Press Handler Logic (incl. State & NEW Focus)
+### Step 5.12: Implement Press Handler & Connect (Log Only) (Granular Step)
 
-*   **Goal:** Create the `onKeyPress` handler in `App.tsx`, connect it to state actions, and implement the *new* focus logic using the direct input element reference captured via the callback.
-*   **Rationale:** Connects virtual key presses to game logic and implements the crucial focus management using the direct ref.
+*   **Goal:** Create the `handleVirtualKeyPress` function in `App.tsx`, pass it down via the `onKeyPress` prop to `VirtualKeyboard`, connect it inside `VirtualKeyboard`, and verify it logs pressed keys.
+*   **Rationale:** Establishes the event handling pathway without introducing state changes or focus logic yet. Verifies the connection.
 *   **Integration Steps:**
-    1.  In `App.tsx`, define the event handler function `handleVirtualKeyPress = (button: string) => { ... }`.
-    2.  Pass this function down as the `onKeyPress` prop to the `<VirtualKeyboard />` component.
-    3.  Modify `VirtualKeyboard.tsx` to accept the `onKeyPress` prop (define in `VirtualKeyboardProps`) and pass it to the `onKeyPress` prop of the underlying `<Keyboard />` component.
-    4.  **Inside `handleVirtualKeyPress` in `App.tsx`:**
-        *   Determine the action based on the received `button` string ('{bksp}' or a letter).
-        *   If it's a letter: Check if `gameState.selectedRow` and `gameState.selectedCol` are valid (not null/undefined). If valid, call `gameState.handleGuessInput(...)`, passing the `selectedRow`, `selectedCol`, the uppercase letter, and the `currentStage` from `timerState`.
-        *   If it's Backspace ('{bksp}'): Call `gameState.handleBackspace()`.
-        *   Use a boolean flag (e.g., `stateUpdated`) to track if either `handleGuessInput` or `handleBackspace` was successfully called.
-        *   **If `stateUpdated` is true:** Use `setTimeout(() => inputElement?.focus(), 0)` to refocus the hidden input. Access the input element via the state variable set by the callback ref (e.g., `inputElement` if using `useState` from Step 5.3).
-*   **Test:** Click a grid cell to select it. Use the virtual keyboard. Verify letters appear in the grid and are deleted correctly by Backspace. **Crucially**: After clicking any virtual key that modifies state, verify focus immediately returns to the hidden input element (use browser dev tools to inspect focus, or immediately type on a physical keyboard - the next character should appear correctly).
+    1.  Define `handleVirtualKeyPress = (button: string) => { console.log('VK Press:', button); }` in `App.tsx`.
+    2.  Pass `handleVirtualKeyPress` as `onKeyPress` prop to `<VirtualKeyboard />`.
+    3.  Modify `VirtualKeyboard.tsx` to accept `onKeyPress?: (button: string) => void` prop.
+    4.  Pass the received `onKeyPress` prop to the `<Keyboard />` component's `onKeyPress` prop.
+*   **Test:** Click virtual keys (letters, backspace, enter). Verify the correct button identifier is logged to the console.
 *   **Checkboxes:**
     *   [x] `handleVirtualKeyPress` function defined in `App.tsx`.
     *   [x] Handler passed down as `onKeyPress` prop to `VirtualKeyboard`.
     *   [x] `onKeyPress` prop accepted and connected in `VirtualKeyboard.tsx`.
-    *   [x] Handler correctly calls `handleGuessInput` (with stage, row, col) for letters after checking selection.
-    *   [x] Handler correctly calls `handleBackspace` for Backspace key.
-    *   [x] New focus logic implemented using `setTimeout` and the direct `inputElement` reference from state/ref callback.
-    *   [x] Grid state updates correctly via virtual keyboard input.
-    *   [x] Focus reliably returns to the hidden input after virtual key presses that modify state.
-*   **Notes:**
-    *   handleVirtualKeyPress is implemented in App.tsx with correct logic for handling different key types.
-    *   The handler is passed to VirtualKeyboard as the onKeyPress prop.
-    *   VirtualKeyboard accepts and connects the onKeyPress prop to the underlying Keyboard component.
-    *   Letter input correctly calls handleGuessInput with proper parameters including currentStage.
-    *   Backspace key press calls handleBackspace.
-    *   Focus is managed using setTimeout and the direct inputElement reference from state.
-    *   The keyboard correctly updates grid state and focus is properly maintained.
+    *   [x] Console logs appear correctly upon virtual key presses, reflecting intent.
+*   **Notes:** *(Combined with subsequent steps in final implementation below)*
 
 ---
 
-### Step 5.13: Final Testing & Refinement
+### Step 5.13: Connect State Actions (Letters & Backspace) (Granular Step)
+
+*   **Goal:** Modify `handleVirtualKeyPress` to call the appropriate `gameState` actions for letter and backspace keys.
+*   **Rationale:** Connects the core input actions to the game state, making the keyboard functional for basic input/deletion. Focus will still be incorrect after this step.
+*   **Integration Steps:**
+    1.  Modify `handleVirtualKeyPress` in `App.tsx`.
+    2.  If button is a letter, call `gameState.handleGuessInput(...)` with correct parameters (row, col, char, stage). Include null checks.
+    3.  If button is `{bksp}`, call `gameState.handleBackspace()`.
+*   **Test:** Click a grid cell. Use virtual keyboard letters and backspace. Verify the grid state updates correctly (letters appear/delete, focus advances due to *existing* state logic, but likely breaks after VK press).
+*   **Checkboxes:**
+    *   [x] `handleVirtualKeyPress` updated for letter keys.
+    *   [x] `gameState.handleGuessInput` called correctly (with stage, row, col) after checking selection.
+    *   [x] `handleVirtualKeyPress` updated for Backspace key.
+    *   [x] `gameState.handleBackspace` called correctly for Backspace key.
+    *   [x] Grid state updates correctly via virtual keyboard letters/backspace.
+*   **Notes:** *(Combined with subsequent steps in final implementation below)*
+
+---
+
+### Step 5.14: Implement Focus Management (Post-State Update) (Granular Step)
+
+*   **Goal:** Implement the logic within `handleVirtualKeyPress` to refocus the hidden input element *after* a state update caused by a letter or backspace press.
+*   **Rationale:** Fixes the user experience by ensuring focus returns to the grid, enabling seamless interaction.
+*   **Integration Steps:**
+    1.  Modify `handleVirtualKeyPress` in `App.tsx`.
+    2.  Add logic (e.g., a flag `stateUpdated`) to track if `handleGuessInput` or `handleBackspace` was called.
+    3.  If `stateUpdated` is true, use `setTimeout(() => inputElement?.focus(), 0)` (referencing the `inputElement` state variable) to refocus.
+*   **Test:** Repeat the test from Step 5.13. Now, verify that after pressing a virtual letter or backspace key, focus reliably returns to the hidden input element (test via dev tools or physical keyboard).
+*   **Checkboxes:**
+    *   [x] Logic added to `handleVirtualKeyPress` to detect if state was updated.
+    *   [x] Focus logic implemented using `setTimeout` and the direct `inputElement` reference.
+    *   [x] Focus reliably returns to the hidden input after state-modifying virtual key presses.
+*   **Notes:** *(Combined with subsequent steps in final implementation below)*
+
+---
+
+### Step 5.15: Define & Implement Enter Key Action (Granular Step)
+
+*   **Goal:** Decide what the Enter key should do and implement the corresponding logic in `handleVirtualKeyPress`, including focus management. *(Decision: No-op for now)*.
+*   **Rationale:** Adds the functionality (or intentional lack thereof) for the Enter key included in the layout.
+*   **Integration Steps:**
+    1.  Modify `handleVirtualKeyPress` in `App.tsx`. Add an `else if (button === '{enter}') { ... }` block.
+    2.  Leave the block empty or add a comment indicating it's a no-op.
+    3.  Ensure the `stateUpdated` flag is *not* set for Enter, so focus is not triggered.
+*   **Test:** Click the Enter key on the virtual keyboard. Verify no action occurs and focus does not change.
+*   **Checkboxes:**
+    *   [x] Enter key behavior defined (no-op).
+    *   [x] `handleVirtualKeyPress` updated for `{enter}`.
+    *   [x] No state action called for Enter.
+    *   [x] Focus management *not* triggered for Enter key.
+*   **Notes:** *(Combined implementation in Step 5.12's notes)*
+
+---
+
+### Step 5.16: Final Testing & Refinement (Renumbered)
 
 *   **Goal:** Perform thorough end-to-end testing across different scenarios and devices, ensuring robustness, visual consistency, and addressing any minor issues.
 *   **Rationale:** Catches edge cases, confirms cross-browser/device compatibility, verifies accessibility basics, and polishes the final implementation.
@@ -331,41 +369,56 @@ To integrate the `react-simple-keyboard` library as the primary input method for
     1.  Systematically execute all checks defined in the **Manual Testing Checklist** (Section 5 below).
     2.  Test functionality and layout on target browsers (e.g., Chrome, Firefox, Safari).
     3.  Test on different device viewport simulations (desktop, tablet, mobile) and on a real mobile device if possible.
-    4.  Pay close attention to layout stability on vertically constrained screens.
+    4.  Pay close attention to layout stability on vertically constrained screens, including the crossword scaling and lack of page scroll.
     5.  Monitor the browser console for any errors or warnings during testing.
-    6.  Conduct a final code review of all modified files (`App.tsx`, `VirtualKeyboard.tsx`, `ThemedCrossword.tsx`, `CrosswordGrid.tsx`, theme files, type files).
-    7.  Consider adding an appropriate `aria-label` (e.g., `aria-label="On-screen keyboard"`) to the keyboard's container element (`VirtualKeyboard.tsx` or its wrapper) for improved screen reader context.
-*   **Test:** Successful completion of all items in the Manual Testing Checklist. Smooth and correct operation observed across target platforms/browsers. Code review approved. Console is free of related errors/warnings.
+    6.  Conduct a final code review of all modified files.
+    7.  Consider adding an appropriate `aria-label` (e.g., `aria-label="On-screen keyboard"`) to the keyboard's container element.
+    8.  Specifically test the refined Backspace behavior (clearing current vs. moving back) and the known virtual->physical keyboard focus issue.
+    9.  Specifically test the mobile number positioning fix (using `dy`).
+*   **Test:** Successful completion of all items in the Manual Testing Checklist. Smooth and correct operation observed across target platforms/browsers. Crossword scales correctly. No page scrolling. Code review approved. Console is free of related errors/warnings. Refined backspace works. Mobile number positioning correct. Known focus issue documented/verified.
 *   **Checkboxes:**
     *   [x] Manual Testing Checklist executed successfully.
     *   [x] Tested on major target browsers.
     *   [x] Tested on desktop and mobile views/devices.
-    *   [x] Layout confirmed stable and responsive across viewports.
+    *   [x] Layout confirmed stable, responsive, **no scroll**, crossword scales.
     *   [x] Console clean of errors/warnings.
     *   [x] Code review passed.
     *   [x] Accessibility considerations reviewed (ARIA labels added if necessary).
+    *   [x] Refined Backspace logic verified.
+    *   [x] Mobile number positioning verified.
+    *   [x] Known focus issue verified and documented.
 *   **Notes:**
     *   Extensive testing has been performed across browsers and device sizes.
     *   The keyboard layout is stable and responsive across different viewports.
     *   Additional styling refinements were made to optimize space usage and appearance.
     *   The input element has an appropriate aria-label for accessibility.
     *   No errors or warnings appear in the console related to the keyboard implementation.
+    *   **Grid scaling and viewport scrolling issues are confirmed resolved.**
+    *   **Refined Backspace logic functions as intended.**
+    *   **Mobile SVG number positioning fixed.**
 
 ---
 
 ## 4. Deliverables
 
 *   New `src/Keyboard/` feature folder with `VirtualKeyboard.tsx` component.
-*   Modifications to `App.tsx`, `ThemedCrossword.tsx`, `CrosswordGrid.tsx`. (`CrosswordProvider.tsx` likely has minimal/no changes related to *this* feature).
+*   Modifications to `App.tsx`, `ThemedCrossword.tsx`, `CrosswordGrid.tsx`, `useGameStateManager.ts`.
 *   Updated type definitions (e.g., `InputRefCallback`, props interfaces).
-*   CSS/Styled-component rules or configurations for keyboard styling.
+*   CSS/Styled-component rules or configurations for keyboard styling (`KeyboardStyles.ts`).
+*   Updated theme object (`CrosswordStyles.ts`).
 *   Completed Manual Testing Checklist document (Section 5).
 
-## 5. Manual Testing Checklist (To be executed in Step 5.13)
+## 5. Manual Testing Checklist (To be executed in Step 5.16)
+
+*(This checklist reflects the state after all refinements)*
 
 **Functionality:**
 *   [x] Can input letters (A-Z) into selected grid cells using the virtual keyboard.
-*   [x] Can use Backspace key on the virtual keyboard to delete the character in the current cell and move focus correctly (as handled by existing state logic).
+*   [x] **Refined Backspace:**
+    *   [x] Pressing Backspace on a filled, editable cell clears only that cell, focus remains.
+    *   [x] Pressing Backspace on an empty, editable cell moves focus backward, skipping uneditable cells, and clears the guess in the first editable cell landed upon.
+    *   [x] Pressing Backspace on a locked cell does nothing.
+*   [x] Enter key on virtual keyboard performs no action.
 *   [x] Virtual keyboard input correctly triggers word completion checks and stage coloring updates.
 *   [x] Virtual keyboard input functions correctly when no cell is selected (no errors, logs warning).
 *   [x] Game completion state is correctly detected after filling the grid using the virtual keyboard.
@@ -374,17 +427,20 @@ To integrate the `react-simple-keyboard` library as the primary input method for
 *   [x] Clicking a grid cell sets focus correctly (verify hidden input has focus).
 *   [x] Clicking a virtual keyboard key correctly updates the grid state.
 *   [x] Focus *immediately* returns to the hidden input element after clicking a virtual keyboard key that modifies state (verify via dev tools or physical keyboard test).
-*   [x] User can seamlessly switch between virtual keyboard and physical keyboard input without losing context or focus.
+*   [x] **Known Issue Verification:** User **cannot** seamlessly switch from virtual keyboard to physical keyboard input without first re-clicking a grid cell.
+*   [x] User **can** seamlessly switch from physical keyboard to virtual keyboard input.
 *   [x] Arrow key navigation using a physical keyboard still works correctly after using the virtual keyboard.
 
 **Layout & Styling:**
 *   [x] Keyboard renders within the `KeyboardArea` boundaries.
 *   [x] Keyboard layout uses the increased minimum height (`13rem`) correctly.
-*   [x] Keyboard styling (background, key colors, borders, fonts, radius) matches the application theme.
-*   [x] Backspace key has its distinct visual style.
+*   [x] Keyboard styling (backgrounds, key colors, borders, fonts, radius, spacing) matches the final intended (dark) theme.
+*   [x] Enter and Backspace keys have their distinct visual style and width.
 *   [x] Layout is responsive and looks acceptable on various screen sizes (desktop, tablet, mobile).
-*   [x] Keyboard does not cause page overflow or unexpected scrolling.
+*   [x] **Scrolling Fixed:** Application remains confined to the viewport (`100svh`); no vertical scrolling occurs.
+*   [x] **Grid Scaling Fixed:** Crossword grid scales down correctly on shorter/narrower viewports.
 *   [x] Keyboard appearance is consistent across major browsers (Chrome, Firefox, Safari).
+*   [x] **Mobile Number Positioning Fixed:** Clue numbers render correctly in the top-left of cells on mobile browsers (Chrome & Safari).
 
 **Accessibility (Basic Checks):**
 *   [x] Can navigate *into* the virtual keyboard component using the Tab key from the main application.
@@ -398,31 +454,54 @@ To integrate the `react-simple-keyboard` library as the primary input method for
 
 ---
 
-## 6. Appendix: Additional Refinements
+## 6. Appendix: Additional Refinements & Fixes (Post-Planned Steps)
 
-In addition to the planned implementation steps, the following refinements were made to optimize the keyboard's appearance, usability, and performance:
+In addition to the planned implementation steps, the following refinements and fixes were made to optimize the keyboard's appearance, usability, performance, and address emergent issues:
 
-### 6.1 Component Structure Optimization
+### 6.1 `CrosswordGrid` Refactoring (Pre-Keyboard Styling)
 
-* **Removed Unnecessary Container**: Eliminated the redundant `KeyboardContainer` styled wrapper in `VirtualKeyboard.tsx` to reduce DOM nesting, since the component was already wrapped in `KeyboardArea` in `App.tsx`.
-* **Simplified Component Return**: Changed from returning a container div to using React Fragments (`<>...</>`) for cleaner DOM structure.
-* **Impact**: Reduced unnecessary nesting, improved performance, and gave more direct control over styling via the parent container.
+*   **Action:** The core `CrosswordGrid` component was refactored from a JavaScript-heavy, ref-based layout calculation using `ResizeObserver` to a simpler CSS/SVG-based approach using direct SVG element rendering (`<g>`, `<rect>`, `<text>`) within a normalized coordinate system (`viewBox="0 0 cols rows"`).
+*   **Rationale:** Aimed to simplify code, improve performance by removing JS calculations, and better leverage SVG's inherent scaling.
+*   **Impact:** Initially caused a disconnection between the visual grid and application logic due to missing event handlers and incorrect data binding in the new rendering structure. These were subsequently fixed (restored `onClick`, corrected guess display, implemented dynamic styling).
 
-### 6.2 Layout Spacing Adjustments
+### 6.2 Crossword Scaling / Viewport Scrolling Fix
 
-* **Reduced Horizontal Container Padding**: Modified `KeyboardArea` padding from `0.75rem 1rem` to `0.75rem 0.1rem`, with progressive reduction (`0.5rem 0.1rem` on medium screens, `0.25rem 0` on small screens) to maximize available width.
-* **Optimized Key Spacing**: 
-  * Increased gap between keys from 3px to 5px for better touch targets and visual separation.
-  * Adjusted second row padding from 30px to 25px for more balanced appearance.
-  * Increased border-radius of keys from 2px to 5px for a more modern, softer appearance.
-* **Outer Container Padding**: Reduced the `.hg-theme-default` container padding from 8px to 3px to minimize wasted space.
-* **Impact**: Created a more compact, space-efficient keyboard that still maintains good usability with appropriate spacing between keys.
+*   **Issue:** Application was scrolling vertically on mobile; crossword grid didn't scale down vertically.
+*   **Fix:** Reverted attempts to change `CrosswordArea` display/min-height. Modified `CrosswordWrapper` to explicitly define its behavior as a flex item (`flex-shrink: 1`, `flex-basis: auto`, removed `height: 100%`) while retaining `max-height: 100%` and `aspect-ratio: 1/1`. Added explicit `width/height: 100%`, `object-fit: contain` to the child SVG.
+*   **Impact:** Resolved the scaling and scrolling issues by allowing the `CrosswordWrapper` to shrink correctly within its flex container while respecting the `1fr` row height and `max-height` constraint.
 
-### 6.3 Responsive Considerations
+### 6.3 Component Structure Optimization (Keyboard)
 
-* **Progressive Padding Reduction**: Implemented a tiered approach to padding reduction at different breakpoints to maintain usability across device sizes.
-* **Mobile-First Design**: Eliminated all horizontal padding on smallest screens to maximize key size on mobile devices.
+*   **Removed Unnecessary Container**: Eliminated the redundant `KeyboardContainer` styled wrapper in `VirtualKeyboard.tsx` to reduce DOM nesting, since the component was already wrapped in `KeyboardArea` in `App.tsx`.
+*   **Simplified Component Return**: Changed from returning a container div to using React Fragments (`<>...</>`) for cleaner DOM structure.
+*   **Impact**: Reduced unnecessary nesting, improved performance, and gave more direct control over styling via the parent container.
 
-These refinements have resulted in a keyboard implementation that is more space-efficient, visually consistent with the application design, and optimized for different screen sizes while maintaining excellent usability.
+### 6.4 Layout Spacing Adjustments (Keyboard & Theme)
+
+*   **Reduced Horizontal Container Padding**: Modified `KeyboardArea` padding to reduce horizontal space and maximize width, especially on mobile.
+*   **Optimized Key Spacing**: Adjusted `gap` between keys, padding within rows (`.hg-row`), and `border-radius` for keys for better touch targets and visual appearance.
+*   **Outer Container Padding**: Reduced the `.hg-theme-default` container padding.
+*   **Dark Theme Implementation:** Updated `crosswordTheme` with dark background colors for grid/keyboard, grey key colors, and white key text, adjusting contrast colors (text, borders, focus) accordingly.
+*   **Impact**: Created a more compact, space-efficient keyboard and implemented the desired dark theme appearance.
+
+### 6.5 Backspace Logic Refinement
+
+*   **Issue:** Original Backspace always deleted and moved back.
+*   **Fix:** Modified `handleBackspace` in `useGameStateManager` to check if the current cell has content. If yes, clear only the current cell; if no, search backward iteratively, skipping non-editable cells, before clearing the first editable one found and moving focus.
+*   **Impact:** More intuitive Backspace behavior, aligning with standard text input.
+
+### 6.6 Mobile Number Positioning Fix
+
+*   **Issue:** Clue numbers appeared bottom-left instead of top-left in SVG cells on mobile (Chrome & Safari).
+*   **Fix:** Modified the `<text>` element for numbers in `CrosswordGrid.tsx`. Changed `dominantBaseline` from `"hanging"` to `"auto"` and added a `dy` attribute (e.g., `dy="0.3em"`) to achieve consistent vertical positioning relative to the `y="0.05"` coordinate across platforms.
+*   **Impact:** Corrected visual rendering of clue numbers on mobile devices.
+
+### 6.7 Hover Style Fix
+
+*   **Issue:** Keyboard `:hover` background style persisted after tap on mobile.
+*   **Fix:** Modified the `.hg-button:hover` rule in `KeyboardGlobalStyles.ts` to explicitly set the background back to the default key background, effectively disabling the hover background change while keeping the `:active` flash.
+*   **Impact:** Prevented the "sticky hover" effect on touch devices.
+
+These refinements and fixes have resulted in a keyboard implementation that is more space-efficient, visually consistent with the application design (including dark theme), addresses key usability issues (Backspace, mobile rendering), resolves critical layout bugs (scaling, scrolling), and is optimized for different screen sizes.
 
 ---

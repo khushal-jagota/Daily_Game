@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useGameStateManager } from './GameFlow/state/useGameStateManager'
 import { AppWrapper, CrosswordArea, ClueArea, KeyboardArea, TimerBarContainer, KeyboardPlaceholder } from './Layout/components'
 import ThemedCrossword from './Crossword/components/ThemedCrossword'
@@ -10,6 +10,8 @@ import StageProgressBar from './Timer/components/StageProgressBar'
 import { crosswordTheme } from './Crossword/styles/CrosswordStyles'
 import { InputRefCallback } from './Crossword/types'
 import VirtualKeyboard from './Keyboard/components/VirtualKeyboard'
+import ResultModal from './Sharing/components/ResultModal'
+import { CanvasData } from './Sharing/types'
 
 // Styled Start Game button
 const StartButton = styled.button`
@@ -57,9 +59,15 @@ const InitialScreenText = styled.p`
 function App() {
   // Control game start state
   const [isGameStarted, setIsGameStarted] = useState(false);
+  
+  // State for result modal visibility
+  const [isResultModalOpen, setIsResultModalOpen] = useState(false);
 
   // Use the game state manager hook to get the state and actions
   const gameState = useGameStateManager();
+  
+  // Ref to track the previous game completion state
+  const prevIsGameCompleteRef = useRef<boolean>(gameState.isGameComplete);
   
   // Use timer hook for tracking elapsed time and stage - updated to preserve time when game is complete
   const { elapsedTime, currentStage, stageTimeRemainingRatio } = useTimer({ 
@@ -92,9 +100,22 @@ function App() {
     gameState.isGameComplete 
   ]);
   
+  // Effect to open the modal automatically ONLY when the game transitions to complete
+  useEffect(() => {
+    // Check if the game JUST completed (was false previously, is true now)
+    if (!prevIsGameCompleteRef.current && gameState.isGameComplete) {
+      setIsResultModalOpen(true);
+    }
+
+    // Update the ref AFTER the check for the next render cycle
+    prevIsGameCompleteRef.current = gameState.isGameComplete;
+
+  // Only depend on the value that determines the transition
+  }, [gameState.isGameComplete]); // Remove isResultModalOpen dependency
+  
   // For testing: log the timer values to the console
   useEffect(() => {
-    // Removed console log for timer values
+    // No console logs needed here
   }, [elapsedTime, currentStage, isGameStarted]);
   
   // Create a wrapper for handleGuessInput that passes the current stage
@@ -143,6 +164,36 @@ function App() {
       }, 0);
     }
   };
+  
+  // Close modal handler
+  const handleCloseResultModal = () => {
+    setIsResultModalOpen(false);
+  };
+  
+  // Prepare canvas data for the result modal
+  const canvasData: CanvasData = {
+    puzzleData: gameState.puzzleData,
+    gridData: gameState.gridData,
+    completedWords: gameState.completedWords,
+    elapsedTime,
+    currentStage,
+    theme: crosswordTheme,
+    puzzleNumber: (gameState.puzzleData as any)?.puzzleNumber || "1",
+    puzzleThemeName: (gameState.puzzleData as any)?.theme || "Sales"
+  };
+  
+  // Log the canvas data when the game completes to verify all required data is present
+  useEffect(() => {
+    if (gameState.isGameComplete) {
+      console.log('[DataVerification] Canvas data for sharing:', {
+        currentStage,
+        elapsedTime,
+        completedWordsCount: gameState.completedWords.size,
+        puzzleNumber: canvasData.puzzleNumber,
+        puzzleThemeName: canvasData.puzzleThemeName
+      });
+    }
+  }, [gameState.isGameComplete, currentStage, elapsedTime, gameState.completedWords, canvasData.puzzleNumber, canvasData.puzzleThemeName]);
 
   // --- Render ---
   return (
@@ -190,6 +241,13 @@ function App() {
             <StartButton onClick={handleStartGame}>Start Game</StartButton>
           </InitialScreen>
         )}
+        
+        {/* Render the ResultModal conditionally */}
+        <ResultModal 
+          isOpen={isResultModalOpen}
+          onClose={handleCloseResultModal}
+          canvasData={canvasData}
+        />
       </AppWrapper>
     </ThemeProvider>
   );
