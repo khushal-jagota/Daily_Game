@@ -89,7 +89,7 @@ export async function drawResultToCanvas(
   try {
     // Define constants
     const PADDING = 20;
-    const FONT_SIZE_TIME = 24;
+    const FONT_SIZE_TIME = 34; // 40% larger than original 24px
     const FONT_SIZE_INFO = 16;
     const LINE_HEIGHT = 1.5; // Relative line height multiplier
     const INFO_LINE_MARGIN_TOP = 5; // Space between time and info line
@@ -167,21 +167,9 @@ export async function drawResultToCanvas(
     const timeX = canvasWidth - PADDING;
     ctx.fillText(formattedTime, timeX, timeY);
 
-    // Draw info line (centered below time)
-    const infoY = timeY + FONT_SIZE_TIME + INFO_LINE_MARGIN_TOP; // Position below time
-    ctx.textAlign = 'center';
-    ctx.font = `${FONT_SIZE_INFO}px Arial, sans-serif`; // Example font
-    ctx.fillStyle = data.theme.textColor;
-
-    const puzzleName = data.puzzleData?.title || "Crossle"; // Access title or use placeholder
-    const puzzleNumber = data.puzzleNumber || "#1";
-    const puzzleTheme = data.puzzleThemeName || "Sales";
-    const infoString = `${puzzleName} ${puzzleNumber} - ${puzzleTheme}`;
-    const infoX = canvasWidth / 2;
-    ctx.fillText(infoString, infoX, infoY);
-
     // Calculate starting y coordinate for the grid
-    const gridStartY = infoY + FONT_SIZE_INFO * LINE_HEIGHT + GRID_MARGIN_TOP; // Use line height for spacing
+    // Remove info line and directly calculate grid start position after time
+    const gridStartY = timeY + FONT_SIZE_TIME + GRID_MARGIN_TOP;
 
     // Reset text alignment
     ctx.textAlign = 'left';

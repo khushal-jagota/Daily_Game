@@ -34,15 +34,19 @@ const ModalContent = styled.div`
 const ModalHeader = styled.div`
   width: 100%;
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
   align-items: center;
-  margin-bottom: 15px;
+  margin-bottom: 20px;
+  position: relative;
+  padding-top: 30px; /* Space for close button */
 `;
 
 const ModalTitle = styled.h2`
   margin: 0;
   color: ${(props) => props.theme.textColor};
   font-size: 1.5rem;
+  text-align: center;
+  padding: 0 20px; /* Give space on the sides for the close button */
 `;
 
 const CloseButton = styled.button`
@@ -52,6 +56,12 @@ const CloseButton = styled.button`
   cursor: pointer;
   color: ${(props) => props.theme.textColor};
   opacity: 0.7;
+  position: absolute;
+  right: 0;
+  top: 0;
+  padding: 5px 8px;
+  margin: 0;
+  line-height: 0.7;
   &:hover {
     opacity: 1;
   }
@@ -130,6 +140,7 @@ export const ResultModal: React.FC<ResultModalProps> = ({
   const [imageBlob, setImageBlob] = useState<Blob | null>(null);
   const [hasRetried, setHasRetried] = useState(false);
   const [shareSuccess, setShareSuccess] = useState(false);
+  const [copySuccess, setCopySuccess] = useState(false);
 
   // Use a ref to track the current imageUrl for cleanup
   const imageUrlRef = useRef<string | null>(null);
@@ -321,15 +332,56 @@ export const ResultModal: React.FC<ResultModalProps> = ({
     }
   };
 
-  const handleDownload = () => {
-    // Will be implemented in step 6.9
+  const handleCopy = async () => {
+    // Reset states
+    setError(null);
+    setCopySuccess(false);
+    
+    // Check if we have a blob to copy
+    if (!imageBlob) {
+      setError('No image available to copy.');
+      return;
+    }
+
+    // Check if Clipboard API is supported
+    if (!navigator.clipboard?.write) {
+      setError('Clipboard API not supported in this browser.');
+      return;
+    }
+
+    try {
+      // Create a ClipboardItem with the image blob
+      const item = new ClipboardItem({
+        [imageBlob.type]: imageBlob
+      });
+
+      // Write to clipboard
+      await navigator.clipboard.write([item]);
+      
+      // Set success state
+      setCopySuccess(true);
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => {
+        setCopySuccess(false);
+      }, 3000);
+      
+    } catch (error) {
+      // Handle errors
+      if (error instanceof Error) {
+        setError(`Failed to copy image: ${error.message}`);
+      } else {
+        setError('Failed to copy image to clipboard.');
+      }
+      console.error('Clipboard write error:', error);
+    }
   };
 
   return (
     <ModalOverlay $isOpen={isOpen} onClick={handleClose}>
       <ModalContent onClick={(e) => e.stopPropagation()}>
         <ModalHeader>
-          <ModalTitle>Game Result</ModalTitle>
+          <ModalTitle>Next Puzzle in 12:30:60</ModalTitle>
           <CloseButton onClick={handleClose}>×</CloseButton>
         </ModalHeader>
 
@@ -357,6 +409,10 @@ export const ResultModal: React.FC<ResultModalProps> = ({
           <SuccessMessage>Successfully shared!</SuccessMessage>
         )}
 
+        {copySuccess && (
+          <SuccessMessage>Image copied to clipboard!</SuccessMessage>
+        )}
+
         <ButtonsContainer>
           <ActionButton 
             onClick={handleShare} 
@@ -365,10 +421,10 @@ export const ResultModal: React.FC<ResultModalProps> = ({
             Share
           </ActionButton>
           <ActionButton 
-            onClick={handleDownload} 
+            onClick={handleCopy} 
             disabled={isLoading || !!error || !imageBlob}
           >
-            Download
+            Copy Image
           </ActionButton>
         </ButtonsContainer>
       </ModalContent>
