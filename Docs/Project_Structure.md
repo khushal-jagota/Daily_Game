@@ -1,32 +1,34 @@
-# Project Structure: Themed Crossword Game (Updated Post-Phase 5)
+# Project Structure: Themed Crossword Game (Updated Post-Phase 6)
 
 ## Executive Summary
 
-This document outlines the project structure for the themed crossword game, emphasizing feature-based modularity. The core architecture centers around a central **`useGameStateManager` custom hook** (`src/GameFlow/state/`), which manages all dynamic game state. UI rendering leverages reused **`CrosswordCore`** components controlled via the **`ThemedCrossword`** adapter (`src/Crossword/components/`).
+This document outlines the project structure for the themed crossword game, emphasizing feature-based modularity. The core architecture centers around a central **`useGameStateManager` custom hook** (`src/GameFlow/state/`), managing dynamic game state. UI rendering leverages reused **`CrosswordCore`** components controlled via **`ThemedCrossword`** (`src/Crossword/components/`). Styling uses **`styled-components`**. The main layout uses **CSS Grid** (`src/Layout/components.ts`).
 
-A significant change implemented in Phase 4.75 is the adoption of **CSS Grid for the main application layout**. The root **`AppWrapper`** component (`src/Layout/components.ts`) now uses `display: grid` and `grid-template-rows` to explicitly define vertical sections for the banner, timer/bar, crossword area, clue area, and keyboard area. This ensures a robust **single-view layout** confined to the viewport height using modern units (`min-height: 100svh` with `100dvh` fallback) and handling **safe area insets** via CSS variables. Row sizing uses `auto`, `1fr`, `max-content`, and `minmax(clamp(...), auto)` for responsive and predictable space allocation. **`App.tsx`** remains the orchestrator, initializing hooks and rendering the main components within this Grid structure.
+Phase 5 introduced the **virtual keyboard** (`src/Keyboard/`) and refined focus management.
 
-Phase 5 introduces the **virtual keyboard** feature using the `react-simple-keyboard` library. The keyboard implementation follows a responsive design approach with optimized spacing and styling that integrates seamlessly with the application's dark theme. A new **focus management system** has been implemented using a direct reference to the hidden input element in the crossword grid, improving interaction between virtual and physical keyboards, though a minor known issue remains with the virtual-to-physical transition.
+**Phase 6 implemented the 'Share Result' feature.** Upon game completion, a **modal (`src/Sharing/components/ResultModal.tsx`)** automatically appears. Inside the modal, a **client-side Canvas renderer (`src/Sharing/utils/canvasRenderer.ts`)** generates a PNG image preview of the result (Layout v4: colored time top-right, centered info line, colored grid below using 'Latest Stage' priority, no letters). The modal provides functional **"Share"** (using `navigator.share` with file/text fallback) and **"Copy Image"** (using `navigator.clipboard.write`) buttons. Modal visibility is triggered in **`App.tsx`** based on game completion state transition, passing memoized data. Image generation is handled within the modal's `useEffect`, including Object URL management for preview and cleanup.
 
-Styling relies on **`styled-components`**, with theme values defined (`src/Crossword/styles/CrosswordStyles.ts`, `src/styled.d.ts`). The Timer/Bar unit, Clue display, and Keyboard have been styled for a clean, responsive look using theme variables (including dark theme additions) and relative units (`rem`, `clamp`, `ch`). Manual testing remains the primary validation strategy, now including checks across various viewports and real devices for keyboard interactions and layout stability.
+**Key Considerations & Current State (Post-Phase 6):**
+*   **Layout Engine:** CSS Grid (`grid-template-rows`) in `AppWrapper`. Stable.
+*   **Core State:** Managed by `useGameStateManager`.
+*   **Input:** Virtual Keyboard functional; Focus management stable.
+*   **Sharing Feature (NEW):**
+    *   Modal (`ResultModal.tsx`) auto-opens on game completion.
+    *   Client-side PNG generation via Canvas API (`canvasRenderer.ts`) implemented (Layout v4).
+    *   Cell coloring uses "Latest Stage" priority.
+    *   Image preview displayed in modal using Blob/Object URL.
+    *   "Share" button implemented using `navigator.share`.
+    *   "Copy Image" button implemented using `navigator.clipboard.write`.
+    *   Modal visibility controlled in `App.tsx` (transition logic).
+*   **`CrosswordCore` Risk:** Remains unchanged - external origins, limited internal documentation, **zero automated tests**. Component stability relies on manual testing and careful modification.
+*   **Testing Strategy:** Remains **Manual Testing Only**. No automated tests (unit, integration, E2E) exist. Error monitoring is **not implemented**. This constitutes significant, ongoing technical debt and risk.
+*   **Styling:** Core components styled; dark theme applied. PNG styling is basic; further refinement may be needed.
 
-**Key Considerations & Current State (Post-Phase 5):**
-*   **Layout Engine:** CSS Grid (`grid-template-rows`) in `AppWrapper`.
-*   **Viewport Handling:** Uses `min-height: 100svh/dvh` and `env(safe-area-inset-*)`. Application layout confirmed stable and non-scrolling.
-*   **Row Sizing:** Uses `auto`, `1fr`, `max-content`, `minmax(clamp(...), auto)`.
-*   **Component Styling:** Timer, Progress Bar, Clue display, and Keyboard styled using theme variables (dark theme applied) and responsive units.
-*   **Crossword Fitting:** `CrosswordWrapper` maintains `1:1` aspect ratio and scales correctly within the `1fr` `CrosswordArea` grid track.
-*   **Virtual Keyboard:** Implemented (`react-simple-keyboard`), styled (dark theme), layout optimized. Includes Letters, Backspace, Enter (non-functional).
-*   **Focus Management:** Refactored to use a direct reference (via callback ref) to the hidden input element managed in `App.tsx`. Enables **improved interaction** between virtual keyboard input and physical keyboard input (with one documented edge case).
-*   **State Management:** Centered on `useGameStateManager`. Keyboard input connected (`handleGuessInput`, refined `handleBackspace`).
-*   **Core Components:** `CrosswordGrid` renders cells directly (post-refactor); uses ref callback pattern. `ThemedCrossword` passes ref callback, removed old focus calls. `CrosswordProvider` provides context.
-*   **Testing:** Manual testing scope expanded for keyboard interaction, focus, layout scaling, and refined Backspace logic. Known issue documented.
-
-**Overall:** The application now provides a complete touch-friendly interface with the virtual keyboard implementation, making it fully usable on mobile and tablet devices. Critical layout, scaling, and rendering issues have been resolved, and a dark theme has been implemented.
+**Overall:** The application now provides core gameplay, virtual keyboard input, and a mechanism for users to view, share, or copy a visual summary of their completed game result. Foundational risks related to testing and the core crossword component persist.
 
 ---
 
-## Project Directory Structure (Post-Phase 5)
+## Project Directory Structure (Post-Phase 6)
 
 ```plaintext
 new-themed-crossword/
@@ -37,72 +39,71 @@ new-themed-crossword/
 ├── scripts/                    # Utility scripts (Future)
 │   └── ...
 ├── src/                        # Source code
-│   ├── App.tsx                 # Main application component. Initializes hooks. Manages virtual keyboard input handling & focus (via callback ref state). Renders Layout components.
+│   ├── App.tsx                 # Main component. Initializes hooks. Manages modal visibility trigger. Passes memoized data to modal. Renders Layout.
 │   ├── main.tsx                # Application entry point
 │   │
-│   ├── Crossword/              # Crossword Feature
-│   │   ├── components/         # UI specific to this feature
-│   │   │   ├── CrosswordCore/  # Reused components <-- Uses styled-components internally
-│   │   │   │   ├── CrosswordProvider.tsx # {UI component} <-- Status: Controlled. Provides context. Forwards interactions via props.
-│   │   │   │   ├── CrosswordGrid.tsx     # {Renders SVG grid directly using CSS/SVG coordinates.} <-- Refactored. Uses ref callback.
+│   ├── Crossword/              # Crossword Feature (Core Grid UI/Logic)
+│   │   ├── components/
+│   │   │   ├── CrosswordCore/  # Reused components (No automated tests)
+│   │   │   │   ├── CrosswordProvider.tsx
+│   │   │   │   ├── CrosswordGrid.tsx
 │   │   │   │   └── context.ts / util.ts
-│   │   │   ├── ThemedCrossword.tsx # {Adapter/Wrapper} <-- Connects GameState <=> Provider. Removed imperative focus calls. Passes ref callback. Applies CrosswordWrapper style.
-│   │   │   └── ClueVisualiser.tsx  # {Clue display} <-- Status: Styled. Uses theme vars. Text-align left.
-│   │   ├── types/              # Types specific to Crossword feature
-│   │   │   └── index.ts          # {Includes InputRefCallback type for input element reference}
-│   │   └── styles/             # Styles specific to Crossword feature
-│   │       ├── CrosswordStyles.ts # {Contains crosswordTheme object (dark theme styles added). Defines CrosswordWrapper...}
+│   │   │   ├── ThemedCrossword.tsx # Adapter
+│   │   │   └── ClueVisualiser.tsx  # Clue display
+│   │   ├── types/
+│   │   │   └── index.ts
+│   │   └── styles/
+│   │       ├── CrosswordStyles.ts # Contains crosswordTheme
 │   │       └── index.ts
 │   │
-│   ├── Keyboard/               # Keyboard Feature
-│   │   ├── components/         # UI specific to this feature
-│   │   │   └── VirtualKeyboard.tsx # {Renders react-simple-keyboard with custom layout} <-- Status: Implemented. Renders QWERTY + Enter/Backspace. Injects global styles.
-│   │   └── styles/             # Styles specific to Keyboard feature
-│   │       └── KeyboardStyles.ts  # {Defines global styles for keyboard theme} <-- Status: Implemented. Uses theme vars (dark theme) with responsive styling.
+│   ├── Keyboard/               # Keyboard Feature (Phase 5)
+│   │   ├── components/
+│   │   │   └── VirtualKeyboard.tsx # Implemented
+│   │   └── styles/
+│   │       └── KeyboardStyles.ts  # Implemented
 │   │
 │   ├── Timer/                  # Timer Feature
-│   │   ├── components/         # UI specific to this feature
-│   │   │   ├── TimerDisplay.tsx  # {Displays MM:SS time} <-- Status: Styled.
-│   │   │   ├── StageProgressBar.tsx # {Displays stage progress} <-- Status: Implemented & Styled.
-│   │   │   └── TimerUnit.tsx     # {Wrapper Component} <-- Status: Added.
-│   │   ├── hooks/              # Hooks specific to this feature
-│   │   │   └── useTimer.ts       # {Tracks time, calculates stage & ratio} <-- Status: Implemented.
+│   │   ├── components/         # TimerDisplay, StageProgressBar, TimerUnit
+│   │   ├── hooks/
+│   │   │   └── useTimer.ts       # Tracks time, calculates stage
 │   │   └── types/
 │   │       └── index.ts
 │   │
 │   ├── GameFlow/               # Game Flow / State Feature
-│   │   ├── components/         # UI specific to this feature (Modals - Future)
-│   │   ├── state/              # State management for this feature
-│   │   │   └── useGameStateManager.ts # {Central coordinator hook} <-- Status: Owns core game state. Backspace logic refined.
+│   │   ├── components/         # (Future Modals?)
+│   │   ├── state/
+│   │   │   └── useGameStateManager.ts # Central coordinator hook
 │   │   └── types/
 │   │       └── index.ts
 │   │
 │   ├── Puzzle/                 # Puzzle Data/Loading Feature
 │   │   ├── data/
-│   │   │   ├── PuzzleRepository.ts # {Handles fetching} <-- Action Item: Implement fetch (Future).
-│   │   │   └── themedPuzzles.ts    # {Hardcoded Source for now}
+│   │   │   ├── PuzzleRepository.ts # (Future)
+│   │   │   └── themedPuzzles.ts    # Hardcoded Source
 │   │   └── types/
 │   │       └── index.ts
 │   │
 │   ├── Layout/                 # Application Layout Feature
-│   │   └── components.ts       # {Defines **CSS Grid layout** styled-components: AppWrapper (grid, svh/dvh, safe-area), ..., KeyboardArea. Defines grid rows & sizing.} <-- Status: Optimized KeyboardArea padding. CrosswordArea uses flex centering.
+│   │   └── components.ts       # CSS Grid layout components (AppWrapper, etc.)
 │   │
-│   ├── Sharing/                # Share Feature (Future Phase)
-│   │   ├── components/         # {ShareButton.tsx - Future}
-│   │   ├── utils/              # {canvasRenderer.ts - Future}
-│   │   └── types.ts            # {Future}
+│   ├── Sharing/                # Share Feature (Phase 6 - NEW)
+│   │   ├── components/
+│   │   │   └── ResultModal.tsx     # {Displays preview, Share/Copy buttons} <-- Implemented
+│   │   ├── utils/
+│   │   │   └── canvasRenderer.ts # {Generates result PNG via Canvas} <-- Implemented
+│   │   └── types.ts            # {CanvasData interface} <-- Implemented
 │   │
 │   ├── Integration/            # External Integrations Feature
-│   │   └── Firebase/           # {Future}
+│   │   └── Firebase/           # (Future)
 │   │
 │   ├── lib/                    # Shared utilities
 │   │   └── utils.ts
 │   ├── hooks/                  # Shared custom hooks (None currently)
 │   ├── styles/                 # Global styles (App level)
-│   │   └── index.css           # {Minimal global styles, resets, safe-area CSS vars} <-- Status: Updated.
+│   │   └── index.css
 │   ├── types/                  # Shared global types (None currently)
 │   ├── assets/                 # Shared assets
-│   └── styled.d.ts             # TypeScript declaration for styled-components theme <-- Status: Updated. Defines full AppTheme including keyboard/dark theme variables.
+│   └── styled.d.ts             # TypeScript declaration for styled-components theme
 ├── dist/                       # Build output
 ├── index.html                  # Main HTML file
 ├── tsconfig.json               # Config file
