@@ -103,7 +103,7 @@ export default function CrosswordGrid({
 
   return (
     <SvgWrapper>
-      <StyledSvg viewBox={viewBox} preserveAspectRatio="xMidYMid meet">
+      <StyledSvg viewBox={viewBox} preserveAspectRatio="xMidYMid meet" data-crossword-grid="true">
         {/* full‐grid background */}
         <rect
           x={0}
@@ -146,13 +146,11 @@ export default function CrosswordGrid({
                   y={0}
                   width={1}
                   height={1}
-                  // --- FIX 4: Use getCellFill helper ---
-                  fill={cellFill}
+                  style={{
+                    fill: cellFill, // Apply fill color via style prop
+                  }}
                   stroke={finalTheme?.cellBorder ?? "#dde1e4"}
                   strokeWidth={0.02}
-                  // --- FIX 3: Apply classes correctly for potential CSS styling ---
-                  // Note: Ensure CSS rules for .focused and .highlighted target the rect
-                  // e.g., g:has(rect.focused) rect { /* styles */ } or just style based on fill
                   className={
                     isFocused ? "focused" : isHighlighted ? "highlighted" : ""
                   }
@@ -182,10 +180,10 @@ export default function CrosswordGrid({
                   textAnchor="middle"
                   dy="0.34em"
                   className="guess-text" // Keep class for potential styling
-                  // --- FIX 4 (cont.): Use getTextColor helper ---
-                  fill={textColor}
+                  style={{
+                    fill: textColor, // Apply fill color via style prop
+                  }}
                 >
-                  {/* --- FIX 2: Display cellData.guess --- */}
                   {cellData.guess || ""}
                 </text>
               </g>

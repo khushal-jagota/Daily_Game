@@ -8,6 +8,7 @@ import useTimer from './Timer/hooks/useTimer'
 import TimerDisplay from './Timer/components/TimerDisplay'
 import StageProgressBar from './Timer/components/StageProgressBar'
 import { crosswordTheme } from './Crossword/styles/CrosswordStyles'
+import { GridTransitionStyles } from './Crossword/styles/GridTransitions'
 import { InputRefCallback } from './Crossword/types'
 import VirtualKeyboard from './Keyboard/components/VirtualKeyboard'
 import ResultModal from './Sharing/components/ResultModal'
@@ -198,6 +199,7 @@ function App() {
   // --- Render ---
   return (
     <ThemeProvider theme={crosswordTheme}>
+      <GridTransitionStyles />
       <AppWrapper>
         <TimerBarContainer $visible={isGameStarted}>
           <TimerDisplay 
