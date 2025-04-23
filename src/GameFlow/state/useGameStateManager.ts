@@ -3,6 +3,7 @@ import { prototypePuzzle } from '../../Puzzle/data/themedPuzzles';
 import { CluesInput, Direction, GridData, CellData, UsedCellData } from '../../Crossword/types';
 import { otherDirection, createGridData } from '../../Crossword/components/CrosswordCore/util';
 import { produce, WritableDraft } from 'immer';
+import { TRANSITION_DURATIONS } from '../../Crossword/styles/GridTransitions';
 
 // Interface for word completion data
 interface CompletionData {
@@ -18,6 +19,15 @@ export function useGameStateManager() {
 
   // Initialize empty Map for completed words with their stage information
   const [completedWords, setCompletedWords] = useState<Map<string, CompletionData>>(new Map());
+  
+  // Track recently completed words for animation
+  const [recentlyCompletedWordIds, setRecentlyCompletedWordIds] = useState<Set<string>>(new Set());
+  
+  // NEW state for two-phase commit
+  const [pendingCompletedWordIds, setPendingCompletedWordIds] = useState<Set<string>>(new Set());
+  
+  // Ref for the timeout to clear recently completed words
+  const recentlyCompletedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Focus and selection state variables
   const [selectedRow, setSelectedRow] = useState<number>(0);
@@ -171,6 +181,8 @@ export function useGameStateManager() {
 
     // Create a new Map with placeholder stage value (0)
     const newlyCompletedWords = new Map<string, CompletionData>();
+    // Track word IDs that were just completed in this check
+    const justCompletedWords = new Set<string>();
 
     // Check all across words
     for (const number in puzzleData.across) {
@@ -186,6 +198,8 @@ export function useGameStateManager() {
           const stageToRecord = stageForNextCompletionCheckRef.current;
           console.log(`[CompletionCheck] New word completed: ${wordId} with stage ${stageToRecord}`);
           newlyCompletedWords.set(wordId, { stage: stageToRecord });
+          // Add to just completed set
+          justCompletedWords.add(wordId);
         }
       }
     }
@@ -204,6 +218,8 @@ export function useGameStateManager() {
           const stageToRecord = stageForNextCompletionCheckRef.current;
           console.log(`[CompletionCheck] New word completed: ${wordId} with stage ${stageToRecord}`);
           newlyCompletedWords.set(wordId, { stage: stageToRecord });
+          // Add to just completed set
+          justCompletedWords.add(wordId);
         }
       }
     }
@@ -224,16 +240,68 @@ export function useGameStateManager() {
 
     if (mapChanged) {
       console.log('[useEffect - CompletionCheck] Completed words map changed. Updating state.', newlyCompletedWords);
-      setCompletedWords(newlyCompletedWords);
-    } else {
-      // console.log('[useEffect - CompletionCheck] Completed words map has not changed.'); // Less noisy
+      
+      // If we have just-completed words, implement two-phase commit
+      if (justCompletedWords.size > 0) {
+        // Create a snapshot to prevent stale closure issues
+        const pendingIds = new Set(justCompletedWords); // freeze snapshot
+        
+        // ── Phase 1: expose slow duration ──
+        setPendingCompletedWordIds(pendingIds);
+
+        requestAnimationFrame(() => {
+          // ── Phase 2: flip colour & kick off animation ──
+          setCompletedWords(() => newlyCompletedWords);   // functional setter
+          setRecentlyCompletedWordIds(pendingIds);        // use snapshot
+
+          requestAnimationFrame(() => {
+            setPendingCompletedWordIds(new Set());        // clear in next frame
+          });
+        });
+        
+        // Clear any existing timeout
+        if (recentlyCompletedTimeoutRef.current) {
+          clearTimeout(recentlyCompletedTimeoutRef.current);
+        }
+        
+        // Simplified timeout calculation - no longer needs cascade factor
+        const timeoutDelay = TRANSITION_DURATIONS.slow + 100;
+        
+        recentlyCompletedTimeoutRef.current = setTimeout(() => {
+          setRecentlyCompletedWordIds(new Set());
+          recentlyCompletedTimeoutRef.current = null;
+        }, timeoutDelay);
+      } else {
+        // No just-completed words, simply update the map
+        setCompletedWords(newlyCompletedWords);
+      }
     }
+
+    // Cleanup function to clear any pending timeouts on unmount or re-run
+    return () => {
+      if (recentlyCompletedTimeoutRef.current) {
+        clearTimeout(recentlyCompletedTimeoutRef.current);
+        recentlyCompletedTimeoutRef.current = null;
+      }
+      // Also clear the sets on cleanup - essential for robustness
+      setRecentlyCompletedWordIds(new Set());
+      setPendingCompletedWordIds(new Set());
+    };
 
   // Dependencies: Run when gridData changes, or when puzzle/check function changes.
   // completedWords is included to properly compare inside the effect.
   }, [gridData, puzzleData, checkWordCorrectness, completedWords, setCompletedWords]);
-  // --- End NEW useEffect ---
-
+  
+  // Remove the separate cleanup effect since cleanup is now handled inside the main effect
+  // useEffect(() => {
+  //   return () => {
+  //     if (recentlyCompletedTimeoutRef.current) {
+  //       clearTimeout(recentlyCompletedTimeoutRef.current);
+  //     }
+  //     // Also clear the set on cleanup
+  //     setRecentlyCompletedWordIds(new Set());
+  //   };
+  // }, []);
 
   /**
    * Handle movement requests (e.g., from arrow keys)
@@ -540,6 +608,8 @@ export function useGameStateManager() {
     currentDirection,
     currentNumber,
     isGameComplete, // Return game completion status
+    recentlyCompletedWordIds,
+    pendingCompletedWordIds, // Return new state
     // Export action handlers
     handleMoveRequest,
     handleMoveToClueStart,

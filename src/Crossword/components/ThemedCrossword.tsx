@@ -20,6 +20,8 @@ interface ThemedCrosswordProps {
     currentDirection: Direction;
     currentNumber: string;
     completedWords: Map<string, CompletionData>; // Changed from Set to Map with CompletionData
+    recentlyCompletedWordIds: Set<string>; // Add recently completed words for animation
+    pendingCompletedWordIds: Set<string>; // Add pending words for two-phase commit
     // Action handlers
     handleCellSelect: (row: number, col: number) => void;
     handleMoveRequest: (dRow: number, dCol: number) => void;
@@ -106,6 +108,9 @@ const ThemedCrossword: React.FC<ThemedCrosswordProps> = ({ gameState, onInputRef
         currentNumber={gameState.currentNumber}
         // Pass completion status map
         cellCompletionStatus={cellCompletionStatus}
+        // Pass animation-related state
+        recentlyCompletedWordIds={gameState.recentlyCompletedWordIds}
+        pendingCompletedWordIds={gameState.pendingCompletedWordIds}
         // Wire up callback handlers to gameState actions
         onCellSelect={gameState.handleCellSelect}
         onMoveRequest={gameState.handleMoveRequest}

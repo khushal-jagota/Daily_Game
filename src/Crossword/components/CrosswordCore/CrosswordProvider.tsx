@@ -221,6 +221,10 @@ ADDED: callback function called when a cell is selected
 
   /** Callback for receiving input element reference. */
   onInputRefChange: PropTypes.func,
+
+  recentlyCompletedWordIds: PropTypes.instanceOf(Set),
+
+  pendingCompletedWordIds: PropTypes.instanceOf(Set),
 };
 
 export type CrosswordProviderProps = EnhancedProps<
@@ -378,6 +382,9 @@ export type CrosswordProviderProps = EnhancedProps<
 
     /** Callback for receiving input element reference. */
     onInputRefChange?: InputRefCallback;
+
+    recentlyCompletedWordIds: Set<string>;
+    pendingCompletedWordIds: Set<string>;
   }
 >;
 
@@ -463,6 +470,9 @@ const CrosswordProvider = React.forwardRef<
 
       // NEW Props (TypeScript) from Step 2.2.1
       onInputRefChange,
+
+      recentlyCompletedWordIds,
+      pendingCompletedWordIds,
     },
     ref
   ) => {
@@ -958,25 +968,27 @@ const CrosswordProvider = React.forwardRef<
       () => ({
         rows,
         cols,
-        gridData, // Uses gridData prop
+        gridData,
         clues,
-        cellCompletionStatus, // Add cell completion status
-        handleInputKeyDown, // Uses updated handler
+        cellCompletionStatus,
+        recentlyCompletedWordIds,
+        pendingCompletedWordIds,
+        handleInputKeyDown,
         handleInputChange,
         handleCellClick,
         handleInputClick,
         handleClueSelected,
         registerFocusHandler,
-        handleSingleCharacter, // Uses updated handler
+        handleSingleCharacter,
         focused,
         selectedPosition: { row: selectedRow, col: selectedCol },
         selectedDirection: currentDirection,
         selectedNumber: currentNumber,
         crosswordCorrect,
       }),
-      // Dependencies correct after Step 2.5.9 update
       [
-        rows, cols, gridData, clues, cellCompletionStatus,
+        rows, cols, gridData, clues, cellCompletionStatus, 
+        recentlyCompletedWordIds, pendingCompletedWordIds,
         handleInputKeyDown, handleInputChange, handleCellClick, handleInputClick,
         handleClueSelected, registerFocusHandler, handleSingleCharacter,
         focused,

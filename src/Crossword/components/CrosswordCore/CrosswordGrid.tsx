@@ -5,6 +5,7 @@ import styled, { ThemeContext } from "styled-components";
 import { getCellKey } from "../../../lib/utils";
 import { CrosswordContext } from "./context";
 import { InputRefCallback, UsedCellData } from "../../types"; // Added UsedCellData
+import { TRANSITION_DURATIONS } from "../../styles/GridTransitions";
 
 const SvgWrapper = styled.div`
   position: relative;
@@ -41,6 +42,8 @@ export default function CrosswordGrid({
     cols,
     gridData,
     cellCompletionStatus, // Get completion status map
+    recentlyCompletedWordIds, // Get recently completed words for animation
+    pendingCompletedWordIds, // Get pending completed words for two-phase commit
     handleInputKeyDown,
     handleInputChange,
     handleCellClick, // Get the handler for cell clicks
@@ -132,8 +135,24 @@ export default function CrosswordGrid({
             // Determine fill and text colors based on state
             const cellFill = getCellFill(isFocused, isHighlighted, completionStatus);
             const textColor = getTextColor(completionStatus);
+            
+            // Determine if this cell is part of a pending completion
+            const usedCell = cellData as UsedCellData;
+            const isSlow = 
+              (usedCell.across && pendingCompletedWordIds?.has(`${usedCell.across}-across`)) ||
+              (usedCell.down && pendingCompletedWordIds?.has(`${usedCell.down}-down`));
+            
+            // Determine the current transition duration based on pending status
+            const currentDuration = isSlow ? TRANSITION_DURATIONS.slow : TRANSITION_DURATIONS.fast;
+            
+            // Construct inline style object with dynamic duration, explicitly 0 delay
+            const dynamicTransitionStyle = {
+              transitionProperty: 'fill',
+              transitionDuration: `${currentDuration}ms`,
+              transitionTimingFunction: 'ease-out',
+              transitionDelay: '0ms' // Explicitly 0 delay
+            };
 
-            // --- FIX 1: Added onClick handler to the <g> element ---
             return (
               <g
                 key={key}
@@ -147,7 +166,8 @@ export default function CrosswordGrid({
                   width={1}
                   height={1}
                   style={{
-                    fill: cellFill, // Apply fill color via style prop
+                    fill: cellFill,
+                    ...dynamicTransitionStyle // Apply calculated duration
                   }}
                   stroke={finalTheme?.cellBorder ?? "#dde1e4"}
                   strokeWidth={0.02}
@@ -155,7 +175,6 @@ export default function CrosswordGrid({
                     isFocused ? "focused" : isHighlighted ? "highlighted" : ""
                   }
                 />
-
 
                 {cellData.number && (
                   <text
@@ -181,7 +200,8 @@ export default function CrosswordGrid({
                   dy="0.34em"
                   className="guess-text" // Keep class for potential styling
                   style={{
-                    fill: textColor, // Apply fill color via style prop
+                    fill: textColor,
+                    ...dynamicTransitionStyle // Apply calculated duration
                   }}
                 >
                   {cellData.guess || ""}
@@ -208,8 +228,7 @@ export default function CrosswordGrid({
         autoComplete="off"
         spellCheck="false"
         autoCorrect="off"
-        readOnly={true} // Prevent mobile keyboard from showing
-        inputMode="none" // Explicitly prevent virtual keyboard on mobile
+        inputMode="none" // Prevent virtual keyboard on mobile devices
         style={{
           position: "absolute",
           top: `calc(${focusedRow * cellHeightPct}% + 2px)`,

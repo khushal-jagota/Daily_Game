@@ -26,6 +26,10 @@ export interface CrosswordContextType {
   clues?: CluesData;
   /** Map of cell completion status for visual feedback */
   cellCompletionStatus?: Map<string, { completed: boolean; stage: number }>;
+  /** Set of word IDs that were recently completed (for transition animation) */
+  recentlyCompletedWordIds?: Set<string>;
+  /** Word set for the *next* frame so cells can adopt the slow duration first */
+  pendingCompletedWordIds?: Set<string>;
 
   /** A handler for `<input>` element KeyDown events. */
   handleInputKeyDown: React.KeyboardEventHandler<HTMLInputElement>;
@@ -65,6 +69,8 @@ export const CrosswordContext = React.createContext<CrosswordContextType>({
   cols: 0,
   gridData: [],
   // clues: { across: [], down: [] },
+  recentlyCompletedWordIds: new Set(),
+  pendingCompletedWordIds: new Set(),
 
   handleInputKeyDown: nop,
   handleInputChange: nop,
