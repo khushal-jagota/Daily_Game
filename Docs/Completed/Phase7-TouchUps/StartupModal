@@ -1,0 +1,150 @@
+# Startup Modal Implementation Plan
+
+**Overall Goal:** Replace the current simple start screen in `App.tsx` with a visually engaging, animated startup modal based on the provided example, ensuring it integrates correctly with the game start flow.
+
+---
+
+## Phase: Startup Modal Implementation
+
+---
+
+### Step 1: Setup & Basic Component Creation
+
+*   **Goal:** Create the `StartupModal.tsx` file, install necessary dependencies (`@radix-ui/react-dialog`, icon library), and define the basic component structure.
+*   **Rationale:** Establish the foundational file structure and dependencies required for the modal. Making the library decision early avoids rework.
+*   **Implementation:**
+    1.  Create the file: `src/GameFlow/components/StartupModal.tsx`.
+    2.  Install dependencies:
+        ```bash
+        npm install @radix-ui/react-dialog lucide-react
+        ```
+        *(Confirming `lucide-react` based on example code, adjust if different library preferred)*.
+    3.  Define a basic functional component `StartupModal` accepting `isOpen` and `onOpenChange` props.
+    4.  Include a minimal return statement (e.g., `return <div>Startup Modal Placeholder</div>;`).
+*   **Tests:**
+    *   **Manual:** Verify the file `src/GameFlow/components/StartupModal.tsx` exists. Temporarily import and render `<StartupModal />` in `App.tsx` (conditionally) to ensure it doesn't crash and the placeholder text appears.
+    *   **Automated (Future):** Add a basic unit test using `@testing-library/react` to check if the component renders without throwing errors.
+*   **Notes:** This step confirms the component file is correctly placed and basic React rendering works. Using Radix UI is recommended for handling accessibility and modal state complexities effectively.
+
+---
+
+### Step 2: Implement Basic Modal Structure & Visibility
+
+*   **Goal:** Utilize `@radix-ui/react-dialog` to render a functional, empty modal structure controlled by the `isOpen` and `onOpenChange` props.
+*   **Rationale:** Ensure the core modal mechanics (display, overlay, dismissal) work correctly *before* adding complex content. Isolates testing of the modal behavior itself.
+*   **Implementation:**
+    1.  Import necessary components from `@radix-ui/react-dialog` (`Dialog`, `DialogContent`, `DialogOverlay`, `DialogClose` if needed later).
+    2.  Wrap the component's return content in `<Dialog open={isOpen} onOpenChange={onOpenChange}>`.
+    3.  Use `<DialogOverlay />` (styled for a dim background).
+    4.  Use `<DialogContent>` as the main container for modal content. Add minimal temporary styling via `styled-components` to give it dimensions and a background color (e.g., `const StyledDialogContent = styled(Dialog.Content)\`...\`;`).
+    5.  Place a temporary placeholder text or element inside `StyledDialogContent`.
+*   **Tests:**
+    *   **Manual:** Integrate temporarily into `App.tsx` (using state for `isOpen`). Verify:
+        *   Modal appears when `isOpen` is true.
+        *   Overlay dims the background.
+        *   Modal content area is visible with basic styling.
+        *   Modal closes when clicking outside (default Radix behavior) or pressing ESC. `onOpenChange` should be called.
+    *   **Automated (Future):** Unit/Integration test: Assert modal content is present/absent based on `isOpen`. Mock and verify `onOpenChange` is called on dismissal interactions. Check ARIA attributes are present (`role="dialog"`, `aria-modal="true"`).
+*   **Notes:** Focus is purely on the modal container and its state management via Radix. Styling is minimal, just enough to see the modal area.
+
+---
+
+### Step 3: Add Static Content Layout & Styling
+
+*   **Goal:** Add the non-animated elements (Title, Theme, Instruction Boxes, Button) and style them using `styled-components` according to the visual example.
+*   **Rationale:** Build the static visual structure of the modal content. Get the core layout and aesthetic correct before adding the animated grid.
+*   **Implementation:**
+    1.  Inside `StyledDialogContent`, add JSX for:
+        *   Title (`Dialog.Title` for accessibility) - "Novae" (or our game name).
+        *   Theme text - "Today's Theme - [Placeholder Theme]".
+        *   Two instruction sections (using Flexbox/Grid for layout), each containing:
+            *   An icon (`Lightbulb`, `Timer` from `lucide-react`).
+            *   A heading (`Dialog.Description` potentially for one section).
+            *   Paragraph text.
+        *   The "Let's Play!" button.
+    2.  Create specific `styled-components` for each element (e.g., `ModalHeader`, `ThemeText`, `InstructionBox`, `InstructionIconWrapper`, `PlayButton`).
+    3.  Apply styles (padding, margins, fonts, colors, borders, backgrounds, flex/grid properties) derived from the example, using our application's theme variables where possible.
+*   **Tests:**
+    *   **Manual:** Visual inspection within the displayed modal. Compare layout, spacing, fonts, colors against the target image. Check icon rendering. Verify basic responsiveness if applicable.
+    *   **Automated (Future):** Snapshot testing to assert the rendered structure. Test for the presence of key text elements and the button.
+*   **Notes:** Focus on layout and static styling. Use placeholder text for theme initially. Ensure styled components are well-named and organized.
+
+---
+
+### Step 4: Render Static Mini-Grid Structure
+
+*   **Goal:** Render the small, static example crossword grid structure within the modal, correctly styled for filled and empty cells.
+*   **Rationale:** Isolate the grid layout and cell rendering logic before tackling the animation. Ensures the grid foundation is correct.
+*   **Implementation:**
+    1.  Define a static 2D array constant within the component representing the grid layout (e.g., `const miniGrid = [['H', null], ['A', 'V'], [null, 'E']];` - adapt based on desired simple example).
+    2.  Create a container element within the modal JSX for the grid.
+    3.  Map over the `miniGrid` array to render rows and cells.
+    4.  Create `styled-components` for `MiniGridContainer`, `MiniGridRow`, `MiniGridCell`, `MiniGridLetter`.
+    5.  Apply styles to `MiniGridCell` (size, borders, background color for non-null cells) and `MiniGridLetter` (font styling). Style conditionally based on whether `letter` is null. Use theme colors.
+*   **Tests:**
+    *   **Manual:** Visual inspection. Verify grid dimensions, cell styling (filled vs. empty), letter positioning and appearance match the desired static look (pre-animation).
+    *   **Automated (Future):** Snapshot test of the rendered grid structure. Test for the correct number of rows/cells.
+*   **Notes:** The grid is purely static at this stage. The structure should visually resemble the example grid layout.
+
+---
+
+### Step 5: Implement Grid Letter Animation
+
+*   **Goal:** Add the sequential fade-in animation to the letters within the mini-grid, triggered when the modal becomes visible.
+*   **Rationale:** Introduce the dynamic behavior specified in the requirements, building upon the static grid structure.
+*   **Implementation:**
+    1.  Add `useState` variables to track the animation state for each word/sequence (e.g., `const [isFirstWordVisible, setIsFirstWordVisible] = useState(false);`, `const [isSecondWordVisible, setIsSecondWordVisible] = useState(false);`).
+    2.  Use `useEffect` that runs when `isOpen` becomes `true`.
+    3.  Inside the `useEffect`, use `setTimeout` to set `isFirstWordVisible` to `true` after a short delay (e.g., 500ms).
+    4.  Use another `setTimeout` (chained or with a longer delay) to set `isSecondWordVisible` to `true` (e.g., 1500ms). Include cleanup for timeouts if `isOpen` becomes false before they fire.
+    5.  Modify the `MiniGridCell` / `MiniGridLetter` styled components:
+        *   Add `transition: opacity 0.6s ease-in-out;` (or similar).
+        *   Set initial `opacity: 0;`.
+        *   Conditionally set `opacity: 1;` based on the relevant animation state flag (`isFirstWordVisible` / `isSecondWordVisible`) and whether the cell belongs to that word.
+        *   *Optional:* Implement letter-by-letter staggering using inline `transition-delay` based on letter index if desired (adds complexity).
+*   **Tests:**
+    *   **Manual:** Open the modal multiple times. Verify letters fade in sequentially. Check timing. Ensure animation resets correctly if the modal is closed and reopened. Test `prefers-reduced-motion` if implemented (animation should be disabled or instant).
+    *   **Automated (Future):** Testing timing is hard. Can test that animation state flags change after delays (`jest.useFakeTimers`). Can test that styles *intended* for animation (e.g., initial opacity 0) are applied.
+*   **Notes:** Start with simple word-by-word fade-in. Staggering individual letters adds complexity but matches the example code more closely. Ensure `useEffect` dependencies and cleanup are correct.
+
+---
+
+### Step 6: Integration with `App.tsx` and Game Start Logic
+
+*   **Goal:** Replace the old `InitialScreen` logic in `App.tsx` entirely with the new `StartupModal`. Connect the "Let's Play!" button to dismiss the modal and trigger the actual game start. Pass the real theme name.
+*   **Rationale:** Connect the completed modal component into the main application flow, making it the functional entry point to the game.
+*   **Implementation:**
+    1.  In `App.tsx`, remove the `InitialScreen`, `InitialScreenText`, `StartButton` styled-components and the associated JSX rendering logic.
+    2.  Ensure `isGameStarted` state exists. Add state for modal visibility: `const [isStartupModalOpen, setIsStartupModalOpen] = useState(true);`.
+    3.  Define a handler function: `const handleStartGame = () => { setIsStartupModalOpen(false); setIsGameStarted(true); };`.
+    4.  Fetch or determine the `currentThemeName` (this might involve adjusting how/when puzzle data is initially accessed, even if it's just the name from `themedPuzzles.ts` for now).
+    5.  Render the modal: `<StartupModal isOpen={isStartupModalOpen} onOpenChange={setIsStartupModalOpen} onStartGame={handleStartGame} themeName={currentThemeName} />`. (Adjust props passed as needed, `onStartGame` might be triggered by the button's onClick within the modal, which then calls `onOpenChange(false)`). Ensure the modal is rendered *outside* the main game layout components initially.
+    6.  Modify `StartupModal.tsx`'s "Let's Play!" button's `onClick` to call `onOpenChange(false)` or the dedicated `onStartGame` prop.
+*   **Tests:**
+    *   **Manual:** Load the application. Verify the `StartupModal` appears automatically. Verify the correct theme name is displayed. Click "Let's Play!". Verify the modal closes *and* the main game components (`ThemedCrossword`, `Timer`, etc.) become visible. Verify the old start screen elements are completely gone.
+    *   **Automated (Future):** Integration test: Simulate app load, assert modal is visible. Simulate button click, assert modal is hidden and main game components are rendered.
+*   **Notes:** This step tightly couples the modal to the application's state management. Pay attention to prop drilling or consider context if state management becomes complex. Accessing the theme name might require a small adjustment to data loading logic in `App.tsx`.
+
+---
+
+### Step 7: Final Polish, Accessibility & Cleanup
+
+*   **Goal:** Perform final visual tweaks, ensure accessibility compliance, test thoroughly, and remove any temporary code/logs.
+*   **Rationale:** Deliver a high-quality, robust, and usable feature. Address potential issues missed in earlier steps.
+*   **Implementation:**
+    1.  Review all styles for pixel-perfect alignment (if desired) and consistency with the application theme.
+    2.  Perform accessibility checks:
+        *   Ensure `Dialog.Title` and `Dialog.Description` are correctly used.
+        *   Test keyboard navigation (Tab, Shift+Tab, Enter on button, Esc).
+        *   Check focus is properly trapped within the modal and returned on close.
+        *   Verify sufficient color contrast.
+        *   Test with a screen reader (VoiceOver/NVDA).
+    3.  Implement `prefers-reduced-motion` media query to disable/reduce animations if not already done.
+    4.  Remove any `console.log` statements, temporary placeholders, or commented-out code.
+    5.  Cross-browser/device testing (manual).
+*   **Tests:**
+    *   **Manual:** Comprehensive visual review, functional testing (opening, closing, starting game), accessibility testing using tools (Axe, Lighthouse) and manual checks (keyboard, screen reader).
+    *   **Automated (Future):** Run accessibility checks within unit/integration tests (`jest-axe`).
+*   **Notes:** This final step is crucial for quality. Don't underestimate the time needed for thorough accessibility testing.
+
+---

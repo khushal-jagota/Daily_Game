@@ -13,6 +13,7 @@ import { InputRefCallback } from './Crossword/types'
 import VirtualKeyboard from './Keyboard/components/VirtualKeyboard'
 import ResultModal from './Sharing/components/ResultModal'
 import { CanvasData } from './Sharing/types'
+import StartupModal from './GameFlow/components/StartupModal'
 
 // Styled Start Game button
 const StartButton = styled.button`
@@ -61,7 +62,8 @@ function App() {
   // Control game start state
   const [isGameStarted, setIsGameStarted] = useState(false);
   
-  // State for result modal visibility
+  // State for modal visibility
+  const [isStartupModalOpen, setIsStartupModalOpen] = useState(true);
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
 
   // Use the game state manager hook to get the state and actions
@@ -133,8 +135,9 @@ function App() {
   // Derive the active clue text from puzzleData based on current direction and number
   const activeClueText = gameState.currentNumber && gameState.puzzleData?.[gameState.currentDirection]?.[gameState.currentNumber]?.clue || '';
   
-  // Start game handler
+  // Start game handler - now handles both starting the game and closing the startup modal
   const handleStartGame = () => {
+    setIsStartupModalOpen(false);
     setIsGameStarted(true);
   };
 
@@ -196,6 +199,9 @@ function App() {
     }
   }, [gameState.isGameComplete, currentStage, elapsedTime, gameState.completedWords, canvasData.puzzleNumber, canvasData.puzzleThemeName]);
 
+  // Get the theme name for the startup modal
+  const puzzleThemeName = (gameState.puzzleData as any)?.theme || "Sales";
+
   // --- Render ---
   return (
     <ThemeProvider theme={crosswordTheme}>
@@ -235,16 +241,19 @@ function App() {
             </KeyboardArea>
           </>
         ) : (
-          <InitialScreen>
-            <InitialScreenText>
-              Welcome to the Daily Crossword! Click the button below to start the game.
-              Your completion time will be tracked and color-coded based on how quickly you solve it.
-            </InitialScreenText>
-            <StartButton onClick={handleStartGame}>Start Game</StartButton>
-          </InitialScreen>
+          /* Use empty div to maintain layout structure when game is not started */
+          <div></div>
         )}
         
-        {/* Render the ResultModal conditionally */}
+        {/* Startup Modal */}
+        <StartupModal 
+          isOpen={isStartupModalOpen}
+          onOpenChange={setIsStartupModalOpen}
+          onStartGame={handleStartGame}
+          themeName={puzzleThemeName}
+        />
+        
+        {/* Result Modal */}
         <ResultModal 
           isOpen={isResultModalOpen}
           onClose={handleCloseResultModal}

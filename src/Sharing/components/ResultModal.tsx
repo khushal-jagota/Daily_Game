@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { CanvasData } from '../types';
 import { drawResultToCanvas } from '../utils/canvasRenderer';
+import { X, Share, Copy, Award, AlertTriangle } from 'lucide-react';
 
 // Styled components for the modal
 const ModalOverlay = styled.div<{ $isOpen: boolean }>`
@@ -10,17 +11,18 @@ const ModalOverlay = styled.div<{ $isOpen: boolean }>`
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.6);
+  background-color: rgba(0, 0, 0, 0.75);
   display: ${(props) => (props.$isOpen ? 'flex' : 'none')};
   justify-content: center;
   align-items: center;
   z-index: 1000;
+  backdrop-filter: blur(2px);
 `;
 
 const ModalContent = styled.div`
-  background-color: ${(props) => props.theme.gridBackground};
-  border-radius: 8px;
-  padding: 20px;
+  background-color: ${(props) => props.theme.gridBackground || '#121212'};
+  border-radius: 12px;
+  padding: 28px;
   width: 90%;
   max-width: 500px;
   max-height: 90vh;
@@ -28,98 +30,146 @@ const ModalContent = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(168, 85, 247, 0.1);
+  border: 1px solid #2D2D2D;
 `;
 
 const ModalHeader = styled.div`
   width: 100%;
   display: flex;
-  flex-direction: column;
+  justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
   position: relative;
-  padding-top: 30px; /* Space for close button */
 `;
 
 const ModalTitle = styled.h2`
   margin: 0;
-  color: ${(props) => props.theme.textColor};
+  color: ${(props) => props.theme.textColor || '#EAEAEA'};
   font-size: 1.5rem;
-  text-align: center;
-  padding: 0 20px; /* Give space on the sides for the close button */
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  
+  svg {
+    color: #1E1E1E;
+  }
 `;
 
 const CloseButton = styled.button`
   background: transparent;
   border: none;
-  font-size: 24px;
   cursor: pointer;
-  color: ${(props) => props.theme.textColor};
+  color: ${(props) => props.theme.textColor || '#EAEAEA'};
   opacity: 0.7;
-  position: absolute;
-  right: 0;
-  top: 0;
-  padding: 5px 8px;
-  margin: 0;
-  line-height: 0.7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  
   &:hover {
     opacity: 1;
+    background-color: rgba(255, 255, 255, 0.05);
   }
+  
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.4);
+  }
+`;
+
+const Divider = styled.div`
+  width: 100%;
+  height: 1px;
+  background-color: #2D2D2D;
+  margin: 8px 0 20px;
 `;
 
 const ImageContainer = styled.div`
   width: 100%;
   display: flex;
   justify-content: center;
-  margin-bottom: 20px;
+  margin: 16px 0 24px;
+  padding: 16px;
+  background-color: #1E1E1E;
+  border-radius: 8px;
+  border: 1px solid #2D2D2D;
+  
   img {
     max-width: 100%;
     max-height: 60vh;
     object-fit: contain;
+    border-radius: 4px;
   }
 `;
 
 const ButtonsContainer = styled.div`
   display: flex;
   justify-content: center;
-  gap: 15px;
-  margin-top: 10px;
+  gap: 16px;
+  margin-top: 20px;
+  width: 100%;
 `;
 
-const ActionButton = styled.button<{ disabled?: boolean }>`
-  padding: 10px 20px;
-  border-radius: 4px;
-  background-color: ${(props) => props.theme.completionStage3Background};
-  color: white;
-  border: none;
-  font-weight: bold;
+const ActionButton = styled.button<{ disabled?: boolean; $variant?: 'primary' | 'secondary' }>`
+  padding: 12px 20px;
+  border-radius: 8px;
+  background-color: ${(props) => props.$variant === 'primary' ? 'rgba(168, 85, 247, 0.15)' : '#1E1E1E'};
+  color: ${(props) => props.$variant === 'primary' ? '#A855F7' : props.theme.textColor || '#EAEAEA'};
+  border: 1px solid ${(props) => props.$variant === 'primary' ? '#A855F7' : '#2D2D2D'};
+  font-weight: 500;
   cursor: ${(props) => (props.disabled ? 'not-allowed' : 'pointer')};
   opacity: ${(props) => (props.disabled ? 0.6 : 1)};
-  transition: background-color 0.3s;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: 1;
+  max-width: 180px;
   
   &:hover:not(:disabled) {
-    background-color: ${(props) => props.theme.completionStage2Background};
+    background-color: ${(props) => props.$variant === 'primary' ? 'rgba(168, 85, 247, 0.25)' : '#2D2D2D'};
+  }
+  
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.4);
+  }
+  
+  svg {
+    width: 18px;
+    height: 18px;
   }
 `;
 
-const LoadingMessage = styled.div`
-  padding: 30px;
+const StatusContainer = styled.div`
+  padding: 24px;
   text-align: center;
-  font-weight: bold;
-  color: ${(props) => props.theme.textColor};
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
 `;
 
-const ErrorMessage = styled.div`
-  padding: 20px;
-  text-align: center;
-  color: red;
+const LoadingMessage = styled(StatusContainer)`
+  color: ${(props) => props.theme.textColor || '#EAEAEA'};
 `;
 
-const SuccessMessage = styled.div`
-  padding: 20px;
-  text-align: center;
-  color: green;
-  font-weight: bold;
+const ErrorMessage = styled(StatusContainer)`
+  color: #EF4444;
+  
+  svg {
+    width: 32px;
+    height: 32px;
+  }
+`;
+
+const SuccessMessage = styled(StatusContainer)`
+  color: #10B981;
+  font-weight: 500;
 `;
 
 interface ResultModalProps {
@@ -249,184 +299,157 @@ export const ResultModal: React.FC<ResultModalProps> = ({
         imageUrlRef.current = null;
       }
     };
-  }, [isOpen, canvasData]); // Only depend on isOpen and canvasData, NOT on state variables
+  }, [isOpen, canvasData]);
 
-  // We want to handle the error
-  useEffect(() => {
-    // If error, automatically try one more time
-    if (error && !hasRetried) {
-      setHasRetried(true);
-      setIsLoading(true);
-      setError(null);
-    }
-  }, [error, hasRetried]);
-
-  // Close modal handler
+  // Handle modal close
   const handleClose = () => {
     onClose();
   };
 
-  // Implement share functionality
+  // Handle share button click
   const handleShare = async () => {
-    // Reset states
-    setError(null);
-    setShareSuccess(false);
+    if (!imageBlob) return;
     
-    // Check if we have a blob to share
-    if (!imageBlob) {
-      setError('No image available to share.');
-      return;
-    }
-
-    try {
-      // Check if Web Share API is available
-      if (!navigator.share) {
-        // Provide fallback or error message for unsupported browsers
-        setError('Share functionality is not supported in this browser.');
-        return;
-      }
-      
-      // Create a File from the Blob for sharing
-      // Use a dynamic filename based on puzzle info if available
-      const puzzleNumber = canvasData.puzzleNumber || '1';
-      const puzzleTheme = canvasData.puzzleThemeName || 'Sales';
-      const fileName = `Crossle-${puzzleNumber}-${puzzleTheme}.png`;
-      
-      const file = new File([imageBlob], fileName, { type: 'image/png' });
-      
-      // Prepare share data with text
-      const shareText = `Check out my Crossle result! I completed puzzle #${puzzleNumber} - ${puzzleTheme}`;
-      const shareTitle = `Crossle #${puzzleNumber} - ${puzzleTheme}`;
-      
-      // Check if the browser supports file sharing
-      // @ts-ignore - TypeScript might not recognize the canShare method
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        // Full share with file
-        await navigator.share({
-          title: shareTitle,
-          text: shareText,
-          files: [file]
-        });
-      } else {
-        // Fallback to text-only sharing
-        await navigator.share({
-          title: shareTitle,
-          text: shareText
-        });
-      }
-      
-      // Set success state
-      setShareSuccess(true);
-      
-      // Clear success message after 3 seconds
-      setTimeout(() => {
-        setShareSuccess(false);
-      }, 3000);
-      
-    } catch (error) {
-      // User cancelled or share failed
-      if (error instanceof Error && error.name !== 'AbortError') {
-        setError(`Failed to share: ${error.message}`);
-      }
-      // We don't set an error for AbortError as it's a user-initiated cancellation
-    }
-  };
-
-  const handleCopy = async () => {
-    // Reset states
-    setError(null);
+    // Reset any previous status messages
+    setShareSuccess(false);
     setCopySuccess(false);
     
-    // Check if we have a blob to copy
-    if (!imageBlob) {
-      setError('No image available to copy.');
-      return;
-    }
-
-    // Check if Clipboard API is supported
-    if (!navigator.clipboard?.write) {
-      setError('Clipboard API not supported in this browser.');
-      return;
-    }
-
-    try {
-      // Create a ClipboardItem with the image blob
-      const item = new ClipboardItem({
-        [imageBlob.type]: imageBlob
-      });
-
-      // Write to clipboard
-      await navigator.clipboard.write([item]);
-      
-      // Set success state
-      setCopySuccess(true);
-      
-      // Clear success message after 3 seconds
-      setTimeout(() => {
-        setCopySuccess(false);
-      }, 3000);
-      
-    } catch (error) {
-      // Handle errors
-      if (error instanceof Error) {
-        setError(`Failed to copy image: ${error.message}`);
-      } else {
-        setError('Failed to copy image to clipboard.');
+    // Create a file from the blob
+    const file = new File([imageBlob], 'crossword-result.png', {
+      type: 'image/png'
+    });
+    
+    // Check if the share API is available and supports sharing files
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        // Try to share both text and image
+        await navigator.share({
+          title: 'My Crossword Result',
+          text: `I completed the "${canvasData.puzzleThemeName}" crossword!`,
+          files: [file]
+        });
+        
+        // Show success message
+        setShareSuccess(true);
+        setTimeout(() => setShareSuccess(false), 3000);
+      } catch (err) {
+        // Ignore AbortError (user cancelled share)
+        if (err instanceof Error && err.name !== 'AbortError') {
+          console.error('Error sharing result:', err);
+          
+          // Fall back to text-only sharing if file sharing failed
+          try {
+            await navigator.share({
+              title: 'My Crossword Result',
+              text: `I completed the "${canvasData.puzzleThemeName}" crossword!`
+            });
+            
+            // Show success message
+            setShareSuccess(true);
+            setTimeout(() => setShareSuccess(false), 3000);
+          } catch (textErr) {
+            // Ignore AbortError (user cancelled share)
+            if (textErr instanceof Error && textErr.name !== 'AbortError') {
+              console.error('Error sharing text result:', textErr);
+            }
+          }
+        }
       }
-      console.error('Clipboard write error:', error);
+    } else {
+      // Fallback if Web Share API is not available
+      alert('Sorry, sharing is not supported on this device/browser.');
     }
   };
 
+  // Handle copy button click
+  const handleCopy = async () => {
+    if (!imageBlob) return;
+    
+    // Reset any previous status messages
+    setShareSuccess(false);
+    setCopySuccess(false);
+    
+    // Try to copy the image to clipboard
+    try {
+      // Check if Clipboard API supports writing
+      if (navigator.clipboard && navigator.clipboard.write) {
+        // Create a clipboard item from the blob
+        const clipboardItem = new ClipboardItem({
+          'image/png': imageBlob
+        });
+        
+        // Write the clipboard item
+        await navigator.clipboard.write([clipboardItem]);
+        
+        // Show success message
+        setCopySuccess(true);
+        setTimeout(() => setCopySuccess(false), 3000);
+      } else {
+        // Fallback if Clipboard API is not available
+        alert('Sorry, copying to clipboard is not supported on this device/browser.');
+      }
+    } catch (err) {
+      console.error('Error copying to clipboard:', err);
+    }
+  };
+
+  // Render the modal content
   return (
     <ModalOverlay $isOpen={isOpen} onClick={handleClose}>
       <ModalContent onClick={(e) => e.stopPropagation()}>
         <ModalHeader>
-          <ModalTitle>Next Puzzle in 12:30:60</ModalTitle>
-          <CloseButton onClick={handleClose}>×</CloseButton>
+          <ModalTitle>
+            <Award />
+            Come Back Tomorrow!
+          </ModalTitle>
+          <CloseButton onClick={handleClose} aria-label="Close">
+            <X size={20} />
+          </CloseButton>
         </ModalHeader>
-
-        <ImageContainer>
-          {isLoading && (
-            <LoadingMessage>Generating your result image...</LoadingMessage>
-          )}
-          
-          {error && (
-            <ErrorMessage>
-              Failed to generate image: {error}
-            </ErrorMessage>
-          )}
-          
-          {!isLoading && !error && imageUrl && (
-            <img src={imageUrl} alt="Crossword Result Preview" />
-          )}
-          
-          {!isLoading && !error && !imageUrl && (
-            <LoadingMessage>No image available</LoadingMessage>
-          )}
-        </ImageContainer>
-
-        {shareSuccess && (
-          <SuccessMessage>Successfully shared!</SuccessMessage>
+        
+        <Divider />
+        
+        {/* Show loading, error, or image */}
+        {isLoading ? (
+          <LoadingMessage>
+            <div>Generating your result...</div>
+          </LoadingMessage>
+        ) : error ? (
+          <ErrorMessage>
+            <AlertTriangle />
+            <div>{error}</div>
+          </ErrorMessage>
+        ) : imageUrl ? (
+          <ImageContainer>
+            <img src={imageUrl} alt="Crossword result" />
+          </ImageContainer>
+        ) : null}
+        
+        {/* Display success messages */}
+        {shareSuccess && <SuccessMessage>Shared successfully!</SuccessMessage>}
+        {copySuccess && <SuccessMessage>Copied to clipboard!</SuccessMessage>}
+        
+        {/* Show buttons if image is available */}
+        {!isLoading && !error && imageUrl && (
+          <ButtonsContainer>
+            <ActionButton 
+              onClick={handleShare} 
+              disabled={!imageBlob}
+              aria-label="Share Result"
+            >
+              <Share size={18} />
+              Share
+            </ActionButton>
+            <ActionButton 
+              onClick={handleCopy} 
+              disabled={!imageBlob}
+              aria-label="Copy to Clipboard"
+            >
+              <Copy size={18} />
+              Copy
+            </ActionButton>
+          </ButtonsContainer>
         )}
-
-        {copySuccess && (
-          <SuccessMessage>Image copied to clipboard!</SuccessMessage>
-        )}
-
-        <ButtonsContainer>
-          <ActionButton 
-            onClick={handleShare} 
-            disabled={isLoading || !!error || !imageBlob}
-          >
-            Share
-          </ActionButton>
-          <ActionButton 
-            onClick={handleCopy} 
-            disabled={isLoading || !!error || !imageBlob}
-          >
-            Copy Image
-          </ActionButton>
-        </ButtonsContainer>
       </ModalContent>
     </ModalOverlay>
   );
