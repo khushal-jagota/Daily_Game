@@ -401,7 +401,6 @@ export const ResultModal: React.FC<ResultModalProps> = ({
               onClick={handleShare}
               disabled={!imageBlob || !navigator.share} // Also disable if share API not present
               aria-label="Share Result Image"
-              $variant="primary" // Example: Make share primary
             >
               <Share size={18} /> {/* Keep size prop */}
               Share

@@ -3,7 +3,7 @@ import * as Dialog from '@radix-ui/react-dialog';
 import styled, { css } from 'styled-components';
 import { Timer } from 'lucide-react';
 
-// --- Interfaces and Constants ---
+// --- Configuration & Constants ---
 
 interface StartupModalProps {
   isOpen: boolean;
@@ -11,6 +11,21 @@ interface StartupModalProps {
   onStartGame: () => void;
   themeName?: string;
 }
+
+// Define theme colors (Ideally from theme provider)
+const lightPurple = '#9D59EF'; // For button gradient start, focus rings
+const lightPurpleGradientEnd = '#8A2BE2'; // Darker shade for button gradient end/hover
+const infoBoxBackground = '#2D2B33'; // Info box background color
+const iconWrapperBackground = '#3C3842'; // Icon circle background within info box
+
+const defaultTextColor = '#EAEAEA'; // Standard text color
+const headerTextColor = '#FFFFFF'; // Explicit white for header
+const subtleTextColor = '#BBBBBB'; // For theme text, instruction details
+const gridBackgroundColor = '#121212'; // Modal background
+const cellBackgroundColor = '#1E1E1E'; // Default cell bg
+const cellBorderColor = '#444'; // Default cell border
+const highlightColorGreen = '#4CAF50'; // Grid animation color
+const highlightColorYellow = '#FFC107'; // Grid animation color
 
 const miniGrid = [
   [null, 'H', null, null, null],
@@ -22,23 +37,14 @@ const miniGrid = [
 // --- Animation Keyframes ---
 
 const overlayShow = css`
-  @keyframes overlayShow {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
+  @keyframes overlayShow { from { opacity: 0; } to { opacity: 1; } }
   animation: overlayShow 150ms cubic-bezier(0.16, 1, 0.3, 1);
 `;
 
 const contentShow = css`
   @keyframes contentShow {
-    from {
-      opacity: 0;
-      transform: translate(-50%, -48%) scale(0.96);
-    }
-    to {
-      opacity: 1;
-      transform: translate(-50%, -50%) scale(1);
-    }
+    from { opacity: 0; transform: translate(-50%, -48%) scale(0.96); }
+    to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
   }
   animation: contentShow 150ms cubic-bezier(0.16, 1, 0.3, 1);
 `;
@@ -46,26 +52,26 @@ const contentShow = css`
 // --- Styled Components ---
 
 const StyledOverlay = styled(Dialog.Overlay)`
-  background-color: rgba(0, 0, 0, 0.7);
+  background-color: rgba(0, 0, 0, 0.75);
   position: fixed;
   inset: 0;
-  z-index: 40; /* Ensure overlay is below content */
+  z-index: 40;
   ${overlayShow}
 `;
 
 const StyledContent = styled(Dialog.Content)`
-  background-color: ${({ theme }) => theme.gridBackground || '#121212'};
-  color: ${({ theme }) => theme.textColor || '#EAEAEA'};
-  border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  background-color: ${({ theme }) => theme.gridBackground || gridBackgroundColor};
+  color: ${({ theme }) => theme.textColor || defaultTextColor};
+  border-radius: 16px;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
   position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  z-index: 50; /* Ensure content is above overlay */
+  z-index: 50;
 
-  /* --- Sizing --- */
-  width: clamp(280px, 90vw, 500px);
+  /* Sizing */
+  width: clamp(300px, 90vw, 520px);
   min-height: 70vh;  /* Fallback */
   min-height: 70svh; /* Target Minimum Height */
   min-height: 70dvh;
@@ -73,94 +79,79 @@ const StyledContent = styled(Dialog.Content)`
   max-height: 90svh; /* Target Maximum Height */
   max-height: 90dvh;
 
-  /* --- Layout --- */
+  /* Layout */
   display: flex;
   flex-direction: column;
-  justify-content: space-between; /* Distribute space vertically */
-  gap: clamp(0.75rem, 2vh, 1.25rem); /* Moderate gap for elements not pushed apart by space-between */
+  justify-content: space-between;
+  gap: clamp(1rem, 2.5vh, 1.75rem);
 
-  /* --- Padding & Safe Area --- */
-  /* Use clamp for responsive padding */
-  padding: clamp(1.25rem, 4vw, 2rem); /* Slightly adjusted padding */
-  /* Add safe area insets */
-  padding-top: calc(clamp(1.25rem, 4vw, 2rem) + env(safe-area-inset-top, 0px));
-  padding-bottom: calc(clamp(1.25rem, 4vw, 2rem) + env(safe-area-inset-bottom, 0px));
-  padding-left: calc(clamp(1.25rem, 4vw, 2rem) + env(safe-area-inset-left, 0px));
-  padding-right: calc(clamp(1.25rem, 4vw, 2rem) + env(safe-area-inset-right, 0px));
+  /* Padding & Safe Area */
+  padding: clamp(1.5rem, 5vw, 2.5rem);
+  padding-top: calc(clamp(1.5rem, 5vw, 2.5rem) + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(clamp(1.5rem, 5vw, 2.5rem) + env(safe-area-inset-bottom, 0px));
+  padding-left: calc(clamp(1.5rem, 5vw, 2.5rem) + env(safe-area-inset-left, 0px));
+  padding-right: calc(clamp(1.5rem, 5vw, 2.5rem) + env(safe-area-inset-right, 0px));
 
-  /* --- Overflow & Animation --- */
-  overflow: hidden; /* Enforce no-scroll policy */
+  overflow: hidden;
   ${contentShow}
 
-  &:focus {
-    outline: none;
-  }
+  &:focus { outline: none; }
+`;
+
+// --- Header Section ---
+const HeaderGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(0.25rem, 1vh, 0.5rem); /* Tight gap */
+  flex-shrink: 0;
 `;
 
 const ModalHeader = styled(Dialog.Title)`
   margin: 0;
-  font-size: clamp(1.7rem, 5vw, 2.2rem); /* Responsive font size */
+  font-size: clamp(1.8rem, 5.5vw, 2.4rem);
   font-weight: 700;
   text-align: center;
-  color: ${({ theme }) => theme.textColor || '#ffffff'};
-  flex-shrink: 0;
+  color: ${({ theme }) => theme.headerTextColor || headerTextColor}; /* White Title */
 `;
 
 const ThemeText = styled(Dialog.Description)`
   margin: 0;
-  font-size: clamp(1rem, 3vw, 1.125rem); /* Responsive font size */
+  font-size: clamp(1rem, 3vw, 1.15rem);
   text-align: center;
-  color: ${({ theme }) => theme.numberColor || '#BBBBBB'};
+  color: ${({ theme }) => theme.subtleTextColor || subtleTextColor};
   font-weight: 500;
-  flex-shrink: 0;
 `;
 
-// --- Mini Grid (Restored Larger Size) ---
+// --- Mini Grid ---
+// (No changes to Mini Grid styles in this iteration)
 const MiniGridContainer = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin: clamp(0.25rem, 1vh, 0.5rem) 0; /* Small vertical margin if needed */
+  margin: 0;
   flex-shrink: 0;
 `;
-
-const MiniGridRow = styled.div`
-  display: flex;
-`;
-
-const MiniGridCell = styled.div<{
-  $isEmpty: boolean;
-  $animateCol?: boolean;
-  $animateRow?: boolean;
-}>`
-  /* Larger responsive size using rem and clamp */
-  width: clamp(2.25rem, 7vw, 3rem);  /* ~36px to 48px - closer to original 40px */
-  height: clamp(2.25rem, 7vw, 3rem);
-  /* Responsive margin */
-  margin: clamp(0.125rem, 0.6vw, 0.2rem); /* ~2px to 3.2px */
-
-  border: ${({ $isEmpty, theme }) => $isEmpty ? 'none' : `1px solid ${theme.cellBorder || '#444'}`};
-  background-color: ${({ $isEmpty, theme }) => $isEmpty ? 'transparent' : theme.highlightBackground || '#1E1E1E'};
-  border-radius: 3px; /* Subtle rounding */
+const MiniGridRow = styled.div` display: flex; `;
+const MiniGridCell = styled.div<{ $isEmpty: boolean; $animateCol?: boolean; $animateRow?: boolean; }>`
+  width: clamp(2.3rem, 7.5vw, 3.1rem);
+  height: clamp(2.3rem, 7.5vw, 3.1rem);
+  margin: clamp(0.13rem, 0.7vw, 0.22rem);
+  border: 1px solid ${({ $isEmpty, theme }) => $isEmpty ? 'transparent' : (theme.cellBorder || cellBorderColor)};
+  background-color: ${({ $isEmpty, theme }) => $isEmpty ? 'transparent' : (theme.cellBackground || cellBackgroundColor)};
+  border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: background-color 0.6s ease-in-out;
-
-  ${({ $animateCol, $animateRow, $isEmpty, theme }) =>
-    !$isEmpty && ($animateCol || $animateRow) && `
-      background-color: ${
-        $animateRow
-          ? theme.completionStage4Background || '#FFC107'
-          : theme.correctColor || '#4CAF50'
-      };
-    `}
+  ${({ $animateCol, $animateRow, $isEmpty, theme }) => !$isEmpty && ($animateCol || $animateRow) && css`
+    background-color: ${$animateRow ? (theme.highlightYellow || highlightColorYellow) : (theme.highlightGreen || highlightColorGreen)};
+    border-color: transparent;
+  `}
 `;
-
 const MiniGridLetter = styled.span`
-  color: ${({ theme }) => theme.textColor || '#FFFFFF'};
-  /* Larger responsive font size relative to cell size */
-  font-size: clamp(1.125rem, 4vw, 1.5rem); /* ~18px to 24px - closer to original 20px */
+  color: ${({ theme }) => theme.textColor || defaultTextColor};
+  font-size: clamp(1.2rem, 4.2vw, 1.6rem);
   font-weight: 600;
   user-select: none;
 `;
@@ -169,106 +160,115 @@ const MiniGridLetter = styled.span`
 const InstructionsContainer = styled.div`
   display: flex;
   flex-direction: column;
-  gap: clamp(0.75rem, 2vh, 1rem); /* Gap between instruction boxes if multiple */
-  margin: clamp(0.25rem, 1vh, 0.5rem) 0; /* Small vertical margin if needed */
-  flex-shrink: 0; /* Prevent shrinking */
-  /* Remove flex-grow and overflow-y */
+  gap: clamp(0.75rem, 2vh, 1rem);
+  margin: 0;
+  flex-shrink: 0;
 `;
 
+// Reverted InstructionBox to the simpler dark style
 const InstructionBox = styled.div`
   display: flex;
-  gap: clamp(0.75rem, 3vw, 1rem);
-  align-items: flex-start;
-  padding: clamp(0.75rem, 3vw, 1rem);
-  background-color: ${({ theme }) => theme.focusBackground || '#1E1E1E'};
-  border-radius: 8px;
+  gap: clamp(0.8rem, 3vw, 1.1rem);
+  align-items: center;
+  padding: clamp(0.8rem, 3vw, 1.2rem);
+  background-color: ${({ theme }) => theme.infoBoxBackground || infoBoxBackground}; /* Dark Background */
+  border-radius: 10px;
+  /* No border */
 `;
 
+// Reverted InstructionIconWrapper
 const InstructionIconWrapper = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: ${({ theme }) => theme.highlightBackground || '#2D2D2D'};
+  background-color: ${({ theme }) => theme.iconWrapperBackground || iconWrapperBackground}; /* Slightly Lighter Circle BG */
   border-radius: 50%;
-  width: clamp(2rem, 8vw, 2.5rem); /* Responsive size */
-  height: clamp(2rem, 8vw, 2.5rem);
+  width: clamp(2.1rem, 8vw, 2.6rem);
+  height: clamp(2.1rem, 8vw, 2.6rem);
   flex-shrink: 0;
-  color: ${({ theme }) => theme.textColor || '#EAEAEA'};
+  color: ${({ theme }) => theme.textColor || defaultTextColor}; /* Icon color (e.g., white) */
 
   svg {
-    width: clamp(1.1rem, 4vw, 1.375rem);
-    height: clamp(1.1rem, 4vw, 1.375rem);
+    width: clamp(1.15rem, 4vw, 1.4rem);
+    height: clamp(1.15rem, 4vw, 1.4rem);
   }
 `;
 
 const InstructionContent = styled.div`
   display: flex;
   flex-direction: column;
-  gap: clamp(0.15rem, 1vh, 0.25rem);
+  gap: clamp(0.2rem, 1vh, 0.3rem);
 `;
 
 const InstructionTitle = styled.h3`
   margin: 0;
-  font-size: clamp(0.9rem, 2.5vw, 1rem); /* Responsive font size */
+  font-size: clamp(0.95rem, 2.6vw, 1.05rem);
   font-weight: 600;
-  color: ${({ theme }) => theme.textColor || '#ffffff'};
+  color: ${({ theme }) => theme.textColor || defaultTextColor}; /* White Text */
 `;
 
 const InstructionText = styled.p`
   margin: 0;
-  font-size: clamp(0.8rem, 2.2vw, 0.875rem); /* Responsive font size */
-  line-height: 1.4;
-  color: ${({ theme }) => theme.numberColor || '#BBBBBB'};
+  font-size: clamp(0.8rem, 2.3vw, 0.9rem);
+  line-height: 1.45;
+  color: ${({ theme }) => theme.subtleTextColor || subtleTextColor}; /* Subtle Text */
 `;
 
 // --- Play Button ---
+// Apply the Light Purple Gradient style HERE
 const PlayButton = styled.button`
-  background-color: ${({ theme }) => theme.correctColor || '#4CAF50'};
-  color: white;
-  padding: clamp(0.6rem, 2.5vh, 0.75rem) clamp(1.2rem, 5vw, 1.5rem);
-  font-size: clamp(1rem, 3.5vw, 1.125rem);
-  font-weight: 600;
-  border: none;
-  border-radius: 8px;
+  background-image: linear-gradient(
+    180deg, /* Top to Bottom */
+    ${({ theme }) => theme.buttonLightPurpleStart || lightPurple} 0%,
+    ${({ theme }) => theme.buttonLightPurpleEnd || lightPurpleGradientEnd} 100%
+  );
+  color: ${headerTextColor}; /* Ensure White Text */
+  padding: clamp(0.75rem, 3.2vh, 1rem) clamp(1.5rem, 6vw, 2rem);
+  font-size: clamp(1.1rem, 4vw, 1.3rem);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  border: none; /* No border */
+  border-radius: 12px;
   cursor: pointer;
-  margin: 0 auto; /* Center horizontally, rely on space-between for vertical */
+  margin: 0 auto;
   display: block;
   width: 100%;
-  max-width: clamp(150px, 50vw, 200px);
-  transition: background-color 0.3s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  max-width: clamp(190px, 60vw, 260px);
+  transition: filter 0.2s ease, transform 0.1s ease;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   flex-shrink: 0;
 
   &:hover {
-    background-color: ${({ theme }) => theme.completionStage2Background || '#45a049'};
+     filter: brightness(0.9);
   }
-
+  &:active {
+     transform: scale(0.97);
+     filter: brightness(0.85);
+     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
   &:focus-visible {
     outline: none;
-    box-shadow: ${({ theme }) => `0 0 0 3px ${theme.gridBackground || '#121212'}, 0 0 0 5px ${theme.correctColor || '#4CAF50'}`};
+    box-shadow: ${({ theme }) => `0 0 0 3px ${theme.gridBackground || gridBackgroundColor}, 0 0 0 5px ${theme.buttonLightPurpleStart || lightPurple}`}; /* Use light purple for focus */
   }
 `;
 
 // --- Reduced Motion ---
 const ReducedMotionStyles = styled.div`
   @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after { /* Apply more broadly */
+    *, *::before, *::after {
       animation-duration: 0.01ms !important;
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
       transition-delay: 0ms !important;
-      scroll-behavior: auto !important; /* Add scroll behavior */
+      scroll-behavior: auto !important;
     }
-    ${StyledOverlay}, ${StyledContent} {
-       animation: none;
-    }
-    ${MiniGridCell} {
-        transition: none;
-    }
+    ${StyledOverlay}, ${StyledContent} { animation: none; }
+    ${MiniGridCell} { transition: none; }
+    ${PlayButton} { transition: none; &:active { transform: none; } filter: none !important; }
   }
 `;
 
-// --- Component Implementation (Unchanged Logic) ---
+// --- Component Implementation (Logic Unchanged) ---
 
 const StartupModal: React.FC<StartupModalProps> = ({
   isOpen,
@@ -276,79 +276,66 @@ const StartupModal: React.FC<StartupModalProps> = ({
   onStartGame,
   themeName = 'Daily Puzzle'
 }) => {
+  // ... same state and effects ...
   const [animateCol2, setAnimateCol2] = useState(false);
   const [animateRow3, setAnimateRow3] = useState(false);
-  useEffect(() => {
-    let timerCol: ReturnType<typeof setTimeout> | undefined;
-    let timerRow: ReturnType<typeof setTimeout> | undefined;
 
+  useEffect(() => {
+    let timerCol: NodeJS.Timeout | undefined;
+    let timerRow: NodeJS.Timeout | undefined;
     if (isOpen) {
       setAnimateCol2(false);
       setAnimateRow3(false);
-
       requestAnimationFrame(() => {
         timerCol = setTimeout(() => setAnimateCol2(true), 1200);
         timerRow = setTimeout(() => setAnimateRow3(true), 2500);
       });
-
     } else {
        clearTimeout(timerCol);
        clearTimeout(timerRow);
     }
-
     return () => {
       clearTimeout(timerCol);
       clearTimeout(timerRow);
     };
   }, [isOpen]);
 
-  const handlePlayClick = () => {
-    onStartGame();
-  };
+  const handlePlayClick = () => { onStartGame(); };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    // Allow Escape key to close the modal via Radix default behavior
     if (e.key === 'Enter' || e.key === ' ') {
-        // Only trigger play if the button itself isn't focused (avoid double trigger)
-        if (document.activeElement !== e.currentTarget.querySelector('button')) {
-            e.preventDefault();
-            handlePlayClick();
-        }
+       const playButton = (e.currentTarget as HTMLElement).querySelector<HTMLButtonElement>('button:not([data-radix-focus-guard])');
+       if (playButton && document.activeElement !== playButton) {
+          e.preventDefault();
+          handlePlayClick();
+       }
     }
   };
 
   const renderMiniGrid = () => {
+    // ... same grid rendering logic ...
     const targetColIndex = 1;
     const targetRowIndex = 2;
-
     return (
       <MiniGridContainer>
         {miniGrid.map((row, rowIndex) => (
           <MiniGridRow key={`row-${rowIndex}`}>
-            {row.map((cell, cellIndex) => {
-              const isTargetCol = cellIndex === targetColIndex;
-              const isTargetRow = rowIndex === targetRowIndex;
-
-              return (
-                <MiniGridCell
-                  key={`cell-${rowIndex}-${cellIndex}`}
-                  $isEmpty={cell === null}
-                  $animateCol={isTargetCol ? animateCol2 : false}
-                  $animateRow={isTargetRow ? animateRow3 : false}
-                >
-                  {cell && (
-                    <MiniGridLetter aria-hidden="true">
-                      {cell}
-                    </MiniGridLetter>
-                  )}
-                </MiniGridCell>
-              );
-            })}
+            {row.map((cell, cellIndex) => (
+              <MiniGridCell
+                key={`cell-${rowIndex}-${cellIndex}`}
+                $isEmpty={cell === null}
+                $animateCol={cellIndex === targetColIndex ? animateCol2 : false}
+                $animateRow={rowIndex === targetRowIndex ? animateRow3 : false}
+              >
+                {cell && <MiniGridLetter aria-hidden="true">{cell}</MiniGridLetter>}
+              </MiniGridCell>
+            ))}
           </MiniGridRow>
         ))}
       </MiniGridContainer>
     );
   };
+
 
   return (
     <>
@@ -358,30 +345,33 @@ const StartupModal: React.FC<StartupModalProps> = ({
           <StyledOverlay />
           <StyledContent
             aria-labelledby="modal-title"
-            aria-describedby="theme-description instruction-title" // Describe by theme and first instruction title
-            onKeyDown={handleKeyDown} // Keep keydown on content for global Enter/Space
+            aria-describedby="theme-description instruction-title"
+            onKeyDown={handleKeyDown}
           >
-            <ModalHeader id="modal-title">Daily Game</ModalHeader>
-            <ThemeText id="theme-description">Today's Theme - {themeName}</ThemeText>
+            <HeaderGroup>
+              {/* Title is White */}
+              <ModalHeader id="modal-title">Daily Game</ModalHeader>
+              <ThemeText id="theme-description">Today's Theme - {themeName}</ThemeText>
+            </HeaderGroup>
 
             {renderMiniGrid()}
 
             <InstructionsContainer>
+              {/* Info Box reverted to simpler dark style */}
               <InstructionBox>
                 <InstructionIconWrapper>
                   <Timer aria-hidden="true" />
                 </InstructionIconWrapper>
                 <InstructionContent>
-                  {/* Add id for aria-describedby */}
                   <InstructionTitle id="instruction-title">Beat the Clock</InstructionTitle>
                   <InstructionText>
                     The faster you solve, the better your final color. Watch the timer and aim for the best score!
                   </InstructionText>
                 </InstructionContent>
               </InstructionBox>
-              {/* Add more InstructionBoxes here if needed */}
             </InstructionsContainer>
 
+            {/* Button uses Light Purple Gradient */}
             <PlayButton
               onClick={handlePlayClick}
               aria-label="Start the game"
