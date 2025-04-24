@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { CanvasData } from '../types';
 import { drawResultToCanvas } from '../utils/canvasRenderer';
-import { X, Share, Copy, Award, AlertTriangle } from 'lucide-react';
+import { X, Share, Copy, AlertTriangle } from 'lucide-react';
 
 // Styled components for the modal
 const ModalOverlay = styled.div<{ $isOpen: boolean }>`
@@ -32,28 +32,19 @@ const ModalContent = styled.div`
   align-items: center;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(168, 85, 247, 0.1);
   border: 1px solid #2D2D2D;
+  position: relative;
 `;
 
 const ModalHeader = styled.div`
   width: 100%;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-  position: relative;
+  text-align: center;
+  margin-bottom: 20px;
 `;
 
 const ModalTitle = styled.h2`
   margin: 0;
   color: ${(props) => props.theme.textColor || '#EAEAEA'};
   font-size: 1.5rem;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  
-  svg {
-    color: #1E1E1E;
-  }
 `;
 
 const CloseButton = styled.button`
@@ -68,6 +59,10 @@ const CloseButton = styled.button`
   padding: 8px;
   border-radius: 50%;
   transition: all 0.2s ease;
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 1;
   
   &:hover {
     opacity: 1;
@@ -80,28 +75,17 @@ const CloseButton = styled.button`
   }
 `;
 
-const Divider = styled.div`
-  width: 100%;
-  height: 1px;
-  background-color: #2D2D2D;
-  margin: 8px 0 20px;
-`;
-
 const ImageContainer = styled.div`
   width: 100%;
   display: flex;
   justify-content: center;
-  margin: 16px 0 24px;
-  padding: 16px;
-  background-color: #1E1E1E;
-  border-radius: 8px;
-  border: 1px solid #2D2D2D;
+  margin: 8px 0 24px;
+  padding: 0;
   
   img {
     max-width: 100%;
     max-height: 60vh;
     object-fit: contain;
-    border-radius: 4px;
   }
 `;
 
@@ -167,11 +151,6 @@ const ErrorMessage = styled(StatusContainer)`
   }
 `;
 
-const SuccessMessage = styled(StatusContainer)`
-  color: #10B981;
-  font-weight: 500;
-`;
-
 interface ResultModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -189,8 +168,6 @@ export const ResultModal: React.FC<ResultModalProps> = ({
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageBlob, setImageBlob] = useState<Blob | null>(null);
   const [hasRetried, setHasRetried] = useState(false);
-  const [shareSuccess, setShareSuccess] = useState(false);
-  const [copySuccess, setCopySuccess] = useState(false);
 
   // Use a ref to track the current imageUrl for cleanup
   const imageUrlRef = useRef<string | null>(null);
@@ -310,10 +287,6 @@ export const ResultModal: React.FC<ResultModalProps> = ({
   const handleShare = async () => {
     if (!imageBlob) return;
     
-    // Reset any previous status messages
-    setShareSuccess(false);
-    setCopySuccess(false);
-    
     // Create a file from the blob
     const file = new File([imageBlob], 'crossword-result.png', {
       type: 'image/png'
@@ -328,10 +301,6 @@ export const ResultModal: React.FC<ResultModalProps> = ({
           text: `I completed the "${canvasData.puzzleThemeName}" crossword!`,
           files: [file]
         });
-        
-        // Show success message
-        setShareSuccess(true);
-        setTimeout(() => setShareSuccess(false), 3000);
       } catch (err) {
         // Ignore AbortError (user cancelled share)
         if (err instanceof Error && err.name !== 'AbortError') {
@@ -343,10 +312,6 @@ export const ResultModal: React.FC<ResultModalProps> = ({
               title: 'My Crossword Result',
               text: `I completed the "${canvasData.puzzleThemeName}" crossword!`
             });
-            
-            // Show success message
-            setShareSuccess(true);
-            setTimeout(() => setShareSuccess(false), 3000);
           } catch (textErr) {
             // Ignore AbortError (user cancelled share)
             if (textErr instanceof Error && textErr.name !== 'AbortError') {
@@ -365,10 +330,6 @@ export const ResultModal: React.FC<ResultModalProps> = ({
   const handleCopy = async () => {
     if (!imageBlob) return;
     
-    // Reset any previous status messages
-    setShareSuccess(false);
-    setCopySuccess(false);
-    
     // Try to copy the image to clipboard
     try {
       // Check if Clipboard API supports writing
@@ -380,10 +341,6 @@ export const ResultModal: React.FC<ResultModalProps> = ({
         
         // Write the clipboard item
         await navigator.clipboard.write([clipboardItem]);
-        
-        // Show success message
-        setCopySuccess(true);
-        setTimeout(() => setCopySuccess(false), 3000);
       } else {
         // Fallback if Clipboard API is not available
         alert('Sorry, copying to clipboard is not supported on this device/browser.');
@@ -399,15 +356,12 @@ export const ResultModal: React.FC<ResultModalProps> = ({
       <ModalContent onClick={(e) => e.stopPropagation()}>
         <ModalHeader>
           <ModalTitle>
-            <Award />
             Come Back Tomorrow!
           </ModalTitle>
           <CloseButton onClick={handleClose} aria-label="Close">
             <X size={20} />
           </CloseButton>
         </ModalHeader>
-        
-        <Divider />
         
         {/* Show loading, error, or image */}
         {isLoading ? (
@@ -424,10 +378,6 @@ export const ResultModal: React.FC<ResultModalProps> = ({
             <img src={imageUrl} alt="Crossword result" />
           </ImageContainer>
         ) : null}
-        
-        {/* Display success messages */}
-        {shareSuccess && <SuccessMessage>Shared successfully!</SuccessMessage>}
-        {copySuccess && <SuccessMessage>Copied to clipboard!</SuccessMessage>}
         
         {/* Show buttons if image is available */}
         {!isLoading && !error && imageUrl && (
