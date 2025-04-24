@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import styled from 'styled-components';
-import { Lightbulb, Timer } from 'lucide-react';
+import { Timer } from 'lucide-react';
 
 // Define the props interface for the StartupModal component
 interface StartupModalProps {
@@ -26,6 +26,7 @@ const StyledOverlay = styled(Dialog.Overlay)`
   position: fixed;
   inset: 0;
   animation: overlayShow 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 50; /* Ensure overlay is above other content */
 
   @keyframes overlayShow {
     from { opacity: 0; }
@@ -41,15 +42,29 @@ const StyledContent = styled(Dialog.Content)`
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+  z-index: 51; /* Ensure content is above overlay */
+
+  /* --- Responsive Sizing & Viewport Units --- */
   width: 90vw;
-  max-width: 500px;
-  max-height: 90vh;
-  padding: 32px;
+  max-width: 31.25rem; /* 500px -> rem for consistency */
+  max-height: 90vh; /* Fallback */
+  max-height: 90svh; /* Use smallest viewport height to avoid jumps */
+  /* Removed overflow-y: auto to adhere to "no-scroll" */
+
+  /* --- Flexible Padding & Safe Area Handling --- */
+  padding: clamp(1rem, 2vw + 1rem, 2rem); /* Responsive padding */
+  /* Incorporate safe area insets using CSS variables (adjust var names if needed) */
+  padding-top: calc(clamp(1rem, 2vw + 1rem, 2rem) + var(--safe-area-inset-top, 0px));
+  padding-bottom: calc(clamp(1rem, 2vw + 1rem, 2rem) + var(--safe-area-inset-bottom, 0px));
+  padding-left: calc(clamp(1rem, 2vw + 1rem, 2rem) + var(--safe-area-inset-left, 0px));
+  padding-right: calc(clamp(1rem, 2vw + 1rem, 2rem) + var(--safe-area-inset-right, 0px));
+
+
   animation: contentShow 150ms cubic-bezier(0.16, 1, 0.3, 1);
   color: ${({ theme }) => theme.textColor || '#EAEAEA'};
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: clamp(1rem, 1.5vw + 0.5rem, 1.5rem); /* Responsive gap */
 
   @keyframes contentShow {
     from {
@@ -69,15 +84,18 @@ const StyledContent = styled(Dialog.Content)`
 
 const ModalHeader = styled(Dialog.Title)`
   margin: 0;
-  font-size: 32px;
+  /* --- Flexible Font Size --- */
+  font-size: clamp(1.5rem, 1.2rem + 1.5vw, 2rem); /* Approx 24px min, 32px max */
   font-weight: 700;
   text-align: center;
   color: ${({ theme }) => theme.textColor || '#ffffff'};
+  line-height: 1.2;
 `;
 
 const ThemeText = styled(Dialog.Description)`
   margin: 0;
-  font-size: 18px;
+  /* --- Flexible Font Size --- */
+  font-size: clamp(1rem, 0.9rem + 0.5vw, 1.125rem); /* Approx 16px min, 18px max */
   text-align: center;
   color: ${({ theme }) => theme.numberColor || '#BBBBBB'};
   font-weight: 500;
@@ -88,64 +106,70 @@ const MiniGridContainer = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin: 16px 0;
+  /* Responsive margin */
+  margin: clamp(0.5rem, 1vw + 0.25rem, 1rem) 0;
 `;
 
 const MiniGridRow = styled.div`
   display: flex;
 `;
 
-// MiniGridCell: Updated for column/row animation
+// MiniGridCell: Updated for responsiveness and column/row animation
 const MiniGridCell = styled.div<{
   $isEmpty: boolean;
-  $animateCol?: boolean; // Animation trigger for the target column
-  $animateRow?: boolean; // Animation trigger for the target row
+  $animateCol?: boolean;
+  $animateRow?: boolean;
 }>`
-  width: 40px;
-  height: 40px;
+  /* --- Flexible Size using clamp --- */
+  width: clamp(1.8rem, 5vw, 2.5rem); /* Approx 29px to 40px, scales with viewport */
+  height: clamp(1.8rem, 5vw, 2.5rem); /* Maintain square aspect ratio */
+  
   border: ${({ $isEmpty, theme }) => $isEmpty ? 'none' : `1px solid ${theme.cellBorder || '#444'}`};
   background-color: ${({ $isEmpty, theme }) => $isEmpty ? 'transparent' : theme.highlightBackground || '#1E1E1E'};
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 2px;
+  /* Responsive margin */
+  margin: clamp(0.1rem, 0.5vw, 0.125rem); /* Approx 1.6px to 2px */
 
-  /* --- Animation Styles --- */
   transition-property: background-color;
   transition-duration: 0.6s;
   transition-timing-function: ease-in-out;
-  /* No delay needed, timing via state */
 
-  /* Apply target color if cell is in target column/row AND animation is active */
   ${({ $animateCol, $animateRow, $isEmpty, theme }) =>
     !$isEmpty && ($animateCol || $animateRow) && `
       background-color: ${
-        $animateRow 
+        $animateRow
           ? theme.completionStage4Background || '#FFC107' // Yellow for row (EVERY)
           : theme.correctColor || '#4CAF50' // Green for column (HAVE)
       };
     `}
 `;
 
-// MiniGridLetter: Simplified without animation props
+// MiniGridLetter: Updated for responsiveness
 const MiniGridLetter = styled.span`
   color: ${({ theme }) => theme.textColor || '#FFFFFF'};
-  font-size: 20px;
+  /* --- Flexible Font Size --- */
+  font-size: clamp(1rem, 0.8rem + 1vw, 1.25rem); /* Approx 16px to 20px, scales with cell */
   font-weight: 600;
+  line-height: 1; /* Ensure letter stays centered */
 `;
 
 const InstructionsContainer = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  margin: 8px 0;
+  /* Responsive gap */
+  gap: clamp(0.75rem, 1vw + 0.5rem, 1rem); /* Approx 12px to 16px */
+  margin: clamp(0.25rem, 0.5vw + 0.1rem, 0.5rem) 0; /* Smaller vertical margin */
 `;
 
 const InstructionBox = styled.div`
   display: flex;
-  gap: 16px;
+  /* Responsive gap */
+  gap: clamp(0.75rem, 1vw + 0.5rem, 1rem); /* Approx 12px to 16px */
   align-items: flex-start;
-  padding: 16px;
+  /* Responsive padding */
+  padding: clamp(0.75rem, 1.5vw + 0.5rem, 1rem); /* Approx 12px to 16px */
   background-color: ${({ theme }) => theme.focusBackground || '#1E1E1E'};
   border-radius: 8px;
 `;
@@ -156,28 +180,31 @@ const InstructionIconWrapper = styled.div`
   justify-content: center;
   background-color: ${({ theme }) => theme.highlightBackground || '#2D2D2D'};
   border-radius: 50%;
-  width: 40px;
-  height: 40px;
+  /* Use rem for fixed-size elements related to font/icon size */
+  width: 2.5rem; /* 40px */
+  height: 2.5rem; /* 40px */
   flex-shrink: 0;
-  color: ${({ theme }) => theme.textColor || '#EAEAEA'}; /* Added for icon color */
+  color: ${({ theme }) => theme.textColor || '#EAEAEA'};
 `;
 
 const InstructionContent = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 0.25rem; /* 4px */
 `;
 
 const InstructionTitle = styled.h3`
   margin: 0;
-  font-size: 16px;
+  /* --- Flexible Font Size --- */
+  font-size: clamp(0.9rem, 0.85rem + 0.25vw, 1rem); /* Approx 14.4px min, 16px max */
   font-weight: 600;
   color: ${({ theme }) => theme.textColor || '#ffffff'};
 `;
 
 const InstructionText = styled.p`
   margin: 0;
-  font-size: 14px;
+  /* --- Flexible Font Size --- */
+  font-size: clamp(0.8rem, 0.75rem + 0.25vw, 0.875rem); /* Approx 12.8px min, 14px max */
   line-height: 1.4;
   color: ${({ theme }) => theme.numberColor || '#BBBBBB'};
 `;
@@ -185,16 +212,19 @@ const InstructionText = styled.p`
 const PlayButton = styled.button`
   background-color: ${({ theme }) => theme.correctColor || '#4CAF50'};
   color: white;
-  padding: 12px 24px;
-  font-size: 18px;
+  /* --- Flexible Padding & Font Size --- */
+  padding: clamp(0.6rem, 1vw + 0.4rem, 0.75rem) clamp(1.2rem, 2vw + 0.8rem, 1.5rem); /* Vert/Horiz padding */
+  font-size: clamp(1rem, 0.9rem + 0.5vw, 1.125rem); /* Approx 16px min, 18px max */
+  
   font-weight: 600;
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  margin: 8px auto 0;
+  /* Responsive margin */
+  margin: clamp(0.5rem, 1vw + 0.25rem, 1rem) auto 0;
   display: block;
   width: 100%;
-  max-width: 200px;
+  max-width: 12.5rem; /* 200px -> rem */
   transition: background-color 0.3s ease;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 
@@ -223,6 +253,7 @@ const ReducedMotionStyles = styled.div`
 /**
  * StartupModal - An animated modal displayed when the game starts
  * Shows the game title, theme, and instructions before gameplay begins
+ * Updated with responsive sizing, modern CSS units, and safe area handling.
  */
 const StartupModal: React.FC<StartupModalProps> = ({
   isOpen,
@@ -230,28 +261,15 @@ const StartupModal: React.FC<StartupModalProps> = ({
   onStartGame,
   themeName = 'Daily Puzzle'
 }) => {
-  // State for column/row animations
-  const [animateCol2, setAnimateCol2] = useState(false); // For Column index 1
-  const [animateRow3, setAnimateRow3] = useState(false); // For Row index 2
-  
-  // Reset and trigger animation when modal opens
+  const [animateCol2, setAnimateCol2] = useState(false);
+  const [animateRow3, setAnimateRow3] = useState(false);
+
   useEffect(() => {
     if (isOpen) {
-      // Reset animation states
       setAnimateCol2(false);
       setAnimateRow3(false);
-
-      // Trigger Column 2 animation after a longer initial delay
-      const timerCol = setTimeout(() => {
-        setAnimateCol2(true);
-      }, 1200); // Increased from 500ms to 1200ms for initial delay
-
-      // Trigger Row 3 animation with a larger gap after Column 2 starts
-      const timerRow = setTimeout(() => {
-        setAnimateRow3(true);
-      }, 2500); // Increased from 900ms to 2000ms for a larger gap between animations
-      
-      // Clean up timeout if modal closes before animation completes
+      const timerCol = setTimeout(() => setAnimateCol2(true), 1200);
+      const timerRow = setTimeout(() => setAnimateRow3(true), 2500);
       return () => {
         clearTimeout(timerCol);
         clearTimeout(timerRow);
@@ -259,12 +277,10 @@ const StartupModal: React.FC<StartupModalProps> = ({
     }
   }, [isOpen]);
 
-  // Simplified to only call onStartGame (parent handles closing modal and starting game)
   const handlePlayClick = () => {
     onStartGame();
   };
 
-  // Keyboard handler for accessibility - allow Enter or Space to trigger Play button
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
@@ -272,32 +288,25 @@ const StartupModal: React.FC<StartupModalProps> = ({
     }
   };
 
-  // Render the mini grid with column/row animation logic
   const renderMiniGrid = () => {
-    const targetColIndex = 1; // Column 2
-    const targetRowIndex = 2; // Row 3
-
+    const targetColIndex = 1;
+    const targetRowIndex = 2;
     return (
       <MiniGridContainer>
         {miniGrid.map((row, rowIndex) => (
           <MiniGridRow key={`row-${rowIndex}`}>
             {row.map((cell, cellIndex) => {
-              // Determine if this cell should participate in animations
               const isTargetCol = cellIndex === targetColIndex;
               const isTargetRow = rowIndex === targetRowIndex;
-
               return (
                 <MiniGridCell
                   key={`cell-${rowIndex}-${cellIndex}`}
                   $isEmpty={cell === null}
-                  // Pass animation triggers if cell is in the target column/row
                   $animateCol={isTargetCol ? animateCol2 : false}
                   $animateRow={isTargetRow ? animateRow3 : false}
                 >
                   {cell && (
-                    <MiniGridLetter aria-hidden="true">
-                      {cell}
-                    </MiniGridLetter>
+                    <MiniGridLetter aria-hidden="true">{cell}</MiniGridLetter>
                   )}
                 </MiniGridCell>
               );
@@ -314,29 +323,17 @@ const StartupModal: React.FC<StartupModalProps> = ({
       <Dialog.Root open={isOpen} onOpenChange={onOpenChange}>
         <Dialog.Portal>
           <StyledOverlay />
-          <StyledContent 
+          <StyledContent
             aria-labelledby="modal-title"
             aria-describedby="modal-description"
             onKeyDown={handleKeyDown}
           >
             <ModalHeader id="modal-title">Daily Game</ModalHeader>
             <ThemeText id="modal-description">Today's Theme - {themeName}</ThemeText>
-            
+
             {renderMiniGrid()}
-            
+
             <InstructionsContainer>
-              <InstructionBox>
-                <InstructionIconWrapper>
-                  <Lightbulb size={22} aria-hidden="true" />
-                </InstructionIconWrapper>
-                <InstructionContent>
-                  <InstructionTitle>Solve the Crossword</InstructionTitle>
-                  <InstructionText>
-                    Fill in all words correctly to complete the puzzle. All clues are related to today's theme.
-                  </InstructionText>
-                </InstructionContent>
-              </InstructionBox>
-              
               <InstructionBox>
                 <InstructionIconWrapper>
                   <Timer size={22} aria-hidden="true" />
@@ -349,11 +346,11 @@ const StartupModal: React.FC<StartupModalProps> = ({
                 </InstructionContent>
               </InstructionBox>
             </InstructionsContainer>
-            
-            <PlayButton 
+
+            <PlayButton
               onClick={handlePlayClick}
               aria-label="Start the game"
-              autoFocus // Automatically focus the button when modal opens
+              autoFocus // Keep autoFocus for accessibility
             >
               Let's Play!
             </PlayButton>
@@ -364,4 +361,4 @@ const StartupModal: React.FC<StartupModalProps> = ({
   );
 };
 
-export default StartupModal; 
+export default StartupModal;
