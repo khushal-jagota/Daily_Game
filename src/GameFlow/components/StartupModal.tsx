@@ -24,8 +24,8 @@ const subtleTextColor = '#BBBBBB'; // For theme text, instruction details
 const gridBackgroundColor = '#121212'; // Modal background
 const cellBackgroundColor = '#1E1E1E'; // Default cell bg
 const cellBorderColor = '#444'; // Default cell border
-const highlightColorGreen = '#4CAF50'; // Grid animation color
-const highlightColorYellow = '#FFC107'; // Grid animation color
+const highlightColorGreen = '#4CAF50'; // Grid animation color fallback
+const highlightColorYellow = '#FFC107'; // Grid animation color fallback
 
 const miniGrid = [
   [null, 'H', null, null, null],
@@ -112,19 +112,18 @@ const ModalHeader = styled(Dialog.Title)`
   font-size: clamp(1.8rem, 5.5vw, 2.4rem);
   font-weight: 700;
   text-align: center;
-  color: ${({ theme }) => theme.headerTextColor || headerTextColor}; /* White Title */
+  color: ${({ theme }) => theme.textColor || headerTextColor}; /* White Title */
 `;
 
 const ThemeText = styled(Dialog.Description)`
   margin: 0;
   font-size: clamp(1rem, 3vw, 1.15rem);
   text-align: center;
-  color: ${({ theme }) => theme.subtleTextColor || subtleTextColor};
+  color: ${({ theme }) => theme.numberColor || subtleTextColor};
   font-weight: 500;
 `;
 
 // --- Mini Grid ---
-// (No changes to Mini Grid styles in this iteration)
 const MiniGridContainer = styled.div`
   display: flex;
   flex-direction: column;
@@ -132,7 +131,9 @@ const MiniGridContainer = styled.div`
   margin: 0;
   flex-shrink: 0;
 `;
+
 const MiniGridRow = styled.div` display: flex; `;
+
 const MiniGridCell = styled.div<{ $isEmpty: boolean; $animateCol?: boolean; $animateRow?: boolean; }>`
   width: clamp(2.3rem, 7.5vw, 3.1rem);
   height: clamp(2.3rem, 7.5vw, 3.1rem);
@@ -145,10 +146,13 @@ const MiniGridCell = styled.div<{ $isEmpty: boolean; $animateCol?: boolean; $ani
   justify-content: center;
   transition: background-color 0.6s ease-in-out;
   ${({ $animateCol, $animateRow, $isEmpty, theme }) => !$isEmpty && ($animateCol || $animateRow) && css`
-    background-color: ${$animateRow ? (theme.highlightYellow || highlightColorYellow) : (theme.highlightGreen || highlightColorGreen)};
+    background-color: ${$animateRow 
+      ? (theme.completionStage3Background || highlightColorYellow) 
+      : (theme.completionStage2Background || highlightColorGreen)};
     border-color: transparent;
   `}
 `;
+
 const MiniGridLetter = styled.span`
   color: ${({ theme }) => theme.textColor || defaultTextColor};
   font-size: clamp(1.2rem, 4.2vw, 1.6rem);
@@ -171,7 +175,7 @@ const InstructionBox = styled.div`
   gap: clamp(0.8rem, 3vw, 1.1rem);
   align-items: center;
   padding: clamp(0.8rem, 3vw, 1.2rem);
-  background-color: ${({ theme }) => theme.infoBoxBackground || infoBoxBackground}; /* Dark Background */
+  background-color: ${infoBoxBackground}; /* Dark Background */
   border-radius: 10px;
   /* No border */
 `;
@@ -181,7 +185,7 @@ const InstructionIconWrapper = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: ${({ theme }) => theme.iconWrapperBackground || iconWrapperBackground}; /* Slightly Lighter Circle BG */
+  background-color: ${iconWrapperBackground}; /* Slightly Lighter Circle BG */
   border-radius: 50%;
   width: clamp(2.1rem, 8vw, 2.6rem);
   height: clamp(2.1rem, 8vw, 2.6rem);
@@ -211,7 +215,7 @@ const InstructionText = styled.p`
   margin: 0;
   font-size: clamp(0.8rem, 2.3vw, 0.9rem);
   line-height: 1.45;
-  color: ${({ theme }) => theme.subtleTextColor || subtleTextColor}; /* Subtle Text */
+  color: ${({ theme }) => theme.numberColor || subtleTextColor}; /* Subtle Text */
 `;
 
 // --- Play Button ---
@@ -219,8 +223,8 @@ const InstructionText = styled.p`
 const PlayButton = styled.button`
   background-image: linear-gradient(
     180deg, /* Top to Bottom */
-    ${({ theme }) => theme.buttonLightPurpleStart || lightPurple} 0%,
-    ${({ theme }) => theme.buttonLightPurpleEnd || lightPurpleGradientEnd} 100%
+    ${lightPurple} 0%,
+    ${lightPurpleGradientEnd} 100%
   );
   color: ${headerTextColor}; /* Ensure White Text */
   padding: clamp(0.75rem, 3.2vh, 1rem) clamp(1.5rem, 6vw, 2rem);
@@ -248,7 +252,7 @@ const PlayButton = styled.button`
   }
   &:focus-visible {
     outline: none;
-    box-shadow: ${({ theme }) => `0 0 0 3px ${theme.gridBackground || gridBackgroundColor}, 0 0 0 5px ${theme.buttonLightPurpleStart || lightPurple}`}; /* Use light purple for focus */
+    box-shadow: 0 0 0 3px ${gridBackgroundColor}, 0 0 0 5px ${lightPurple}; /* Use light purple for focus */
   }
 `;
 
@@ -276,19 +280,19 @@ const StartupModal: React.FC<StartupModalProps> = ({
   onStartGame,
   themeName = 'Daily Puzzle'
 }) => {
-  // ... same state and effects ...
   const [animateCol2, setAnimateCol2] = useState(false);
   const [animateRow3, setAnimateRow3] = useState(false);
 
   useEffect(() => {
-    let timerCol: NodeJS.Timeout | undefined;
-    let timerRow: NodeJS.Timeout | undefined;
+    let timerCol: ReturnType<typeof setTimeout> | undefined;
+    let timerRow: ReturnType<typeof setTimeout> | undefined;
+    
     if (isOpen) {
       setAnimateCol2(false);
       setAnimateRow3(false);
       requestAnimationFrame(() => {
-        timerCol = setTimeout(() => setAnimateCol2(true), 1200);
-        timerRow = setTimeout(() => setAnimateRow3(true), 2500);
+        timerCol = setTimeout(() => setAnimateCol2(true), 800);
+        timerRow = setTimeout(() => setAnimateRow3(true), 1600);
       });
     } else {
        clearTimeout(timerCol);
@@ -313,7 +317,6 @@ const StartupModal: React.FC<StartupModalProps> = ({
   };
 
   const renderMiniGrid = () => {
-    // ... same grid rendering logic ...
     const targetColIndex = 1;
     const targetRowIndex = 2;
     return (
@@ -336,7 +339,6 @@ const StartupModal: React.FC<StartupModalProps> = ({
     );
   };
 
-
   return (
     <>
       <ReducedMotionStyles />
@@ -349,7 +351,6 @@ const StartupModal: React.FC<StartupModalProps> = ({
             onKeyDown={handleKeyDown}
           >
             <HeaderGroup>
-              {/* Title is White */}
               <ModalHeader id="modal-title">Daily Game</ModalHeader>
               <ThemeText id="theme-description">Today's Theme - {themeName}</ThemeText>
             </HeaderGroup>
@@ -357,7 +358,6 @@ const StartupModal: React.FC<StartupModalProps> = ({
             {renderMiniGrid()}
 
             <InstructionsContainer>
-              {/* Info Box reverted to simpler dark style */}
               <InstructionBox>
                 <InstructionIconWrapper>
                   <Timer aria-hidden="true" />
@@ -371,7 +371,6 @@ const StartupModal: React.FC<StartupModalProps> = ({
               </InstructionBox>
             </InstructionsContainer>
 
-            {/* Button uses Light Purple Gradient */}
             <PlayButton
               onClick={handlePlayClick}
               aria-label="Start the game"

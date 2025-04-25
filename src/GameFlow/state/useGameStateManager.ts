@@ -90,6 +90,16 @@ export function useGameStateManager() {
   }, [setSelectedRow, setSelectedCol, setCurrentDirection, setCurrentNumber]);
   // --- End Step 2.75.2 Helper Definition ---
 
+  // Initialize selection to focus on first letter of first across clue
+  useEffect(() => {
+    // Only run if puzzleData is available
+    if (puzzleData?.across?.['1']) {
+      const firstClue = puzzleData.across['1'];
+      // Set the selection to the first letter's position
+      updateSelectionState(firstClue.row, firstClue.col, 'across', '1');
+      console.log(`[InitialFocus] Set to first letter of 1-across: (${firstClue.row},${firstClue.col})`);
+    }
+  }, [puzzleData, updateSelectionState]); // Only re-run if puzzleData or updateSelectionState changes
 
   /**
    * Helper to check if a cell is editable based on completion status (Strict Locking)
