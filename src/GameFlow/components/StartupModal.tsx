@@ -10,6 +10,9 @@ interface StartupModalProps {
   onOpenChange: (open: boolean) => void;
   onStartGame: () => void;
   themeName?: string;
+  isLoading?: boolean;
+  errorMessage?: string;
+  hasInitiatedStart?: boolean;
 }
 
 // Define theme colors (Ideally from theme provider)
@@ -33,6 +36,11 @@ const miniGrid = [
   ['E', 'V', 'E', 'R', 'Y'],
   [null, 'E', null, null, null]
 ];
+
+// The fade-in animation duration in ms - defined as constant for consistent reference
+const FADE_IN_DURATION = 500;
+// Small additional delay before starting grid animations
+const ANIMATION_START_DELAY = 150;
 
 // --- Animation Keyframes ---
 
@@ -115,12 +123,16 @@ const ModalHeader = styled(Dialog.Title)`
   color: ${({ theme }) => theme.textColor || headerTextColor}; /* White Title */
 `;
 
-const ThemeText = styled(Dialog.Description)`
-  margin: 0;
+// Updated ThemeText component to support fade-in
+const ThemeText = styled(Dialog.Description)<{ $visible: boolean }>`
+  margin: 0.5rem 0;
+  min-height: 1.5rem; /* Maintain consistent vertical spacing */
   font-size: clamp(1rem, 3vw, 1.15rem);
   text-align: center;
   color: ${({ theme }) => theme.numberColor || subtleTextColor};
   font-weight: 500;
+  opacity: ${({ $visible }) => ($visible ? 1 : 0)};
+  transition: opacity ${FADE_IN_DURATION}ms ease-in-out;
 `;
 
 // --- Mini Grid ---
@@ -219,40 +231,33 @@ const InstructionText = styled.p`
 `;
 
 // --- Play Button ---
-// Apply the Light Purple Gradient style HERE
-const PlayButton = styled.button`
-  background-image: linear-gradient(
-    180deg, /* Top to Bottom */
-    ${lightPurple} 0%,
-    ${lightPurpleGradientEnd} 100%
-  );
-  color: ${headerTextColor}; /* Ensure White Text */
-  padding: clamp(0.75rem, 3.2vh, 1rem) clamp(1.5rem, 6vw, 2rem);
-  font-size: clamp(1.1rem, 4vw, 1.3rem);
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  border: none; /* No border */
-  border-radius: 12px;
-  cursor: pointer;
-  margin: 0 auto;
-  display: block;
+// Apply the Light Purple Gradient style
+const PlayButton = styled.button<{ $disabled?: boolean }>`
+  background: ${({ $disabled }) => $disabled 
+    ? '#666666' // Gray background for disabled state
+    : `linear-gradient(to right, ${lightPurple}, ${lightPurpleGradientEnd})`};
+  color: white;
+  font-size: clamp(1rem, 3.2vw, 1.2rem);
+  font-weight: 600;
   width: 100%;
-  max-width: clamp(190px, 60vw, 260px);
-  transition: filter 0.2s ease, transform 0.1s ease;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  flex-shrink: 0;
-
+  padding: clamp(0.8rem, 2.5vh, 1.2rem) 0;
+  border: none;
+  border-radius: 10px;
+  cursor: ${({ $disabled }) => $disabled ? 'not-allowed' : 'pointer'};
+  opacity: ${({ $disabled }) => $disabled ? 0.7 : 1}; // Reduce opacity for disabled state
+  transition: filter 0.2s ease, opacity 0.2s ease;
+  margin-top: auto; /* Push to bottom */
+  box-shadow: ${({ $disabled }) => $disabled ? 'none' : '0 3px 10px rgba(138, 43, 226, 0.2)'};
+  
   &:hover {
-     filter: brightness(0.9);
+    filter: ${({ $disabled }) => $disabled ? 'none' : 'brightness(1.05)'};
   }
-  &:active {
-     transform: scale(0.97);
-     filter: brightness(0.85);
-     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  }
-  &:focus-visible {
+  
+  &:focus {
     outline: none;
-    box-shadow: 0 0 0 3px ${gridBackgroundColor}, 0 0 0 5px ${lightPurple}; /* Use light purple for focus */
+    box-shadow: ${({ $disabled }) => $disabled 
+      ? 'none' 
+      : `0 0 0 2px ${lightPurple}, 0 3px 10px rgba(138, 43, 226, 0.3)`};
   }
 `;
 
@@ -272,46 +277,105 @@ const ReducedMotionStyles = styled.div`
   }
 `;
 
-// --- Component Implementation (Logic Unchanged) ---
+// --- Component Implementation ---
 
 const StartupModal: React.FC<StartupModalProps> = ({
   isOpen,
   onOpenChange,
   onStartGame,
-  themeName = 'Daily Puzzle'
+  themeName = 'Daily Puzzle',
+  isLoading = false,
+  errorMessage,
+  hasInitiatedStart
 }) => {
   const [animateCol2, setAnimateCol2] = useState(false);
   const [animateRow3, setAnimateRow3] = useState(false);
+  // Add state to track when theme title should be visible
+  const [themeVisible, setThemeVisible] = useState(!isLoading);
+  // Add state to track button click processing
+  const [isProcessingClick, setIsProcessingClick] = useState(false);
 
-  useEffect(() => {
-    let timerCol: ReturnType<typeof setTimeout> | undefined;
-    let timerRow: ReturnType<typeof setTimeout> | undefined;
+  // Handle grid animations
+  const startGridAnimations = () => {
+    // Reset animations first
+    setAnimateCol2(false);
+    setAnimateRow3(false);
     
-    if (isOpen) {
-      setAnimateCol2(false);
-      setAnimateRow3(false);
-      requestAnimationFrame(() => {
-        timerCol = setTimeout(() => setAnimateCol2(true), 800);
-        timerRow = setTimeout(() => setAnimateRow3(true), 1600);
-      });
-    } else {
-       clearTimeout(timerCol);
-       clearTimeout(timerRow);
-    }
-    return () => {
-      clearTimeout(timerCol);
-      clearTimeout(timerRow);
-    };
-  }, [isOpen]);
+    // Start animations with delays
+    requestAnimationFrame(() => {
+      const colTimer = setTimeout(() => setAnimateCol2(true), 800);
+      const rowTimer = setTimeout(() => setAnimateRow3(true), 1600);
+      
+      return () => {
+        clearTimeout(colTimer);
+        clearTimeout(rowTimer);
+      };
+    });
+  };
 
-  const handlePlayClick = () => { onStartGame(); };
+  // Effect for modal open/close
+  useEffect(() => {
+    if (isOpen && !isLoading) {
+      // If already loaded and modal opens, start animations immediately
+      startGridAnimations();
+    }
+    
+    // Clean up animations when modal closes or component unmounts
+    return () => {
+      if (!isOpen) {
+        setAnimateCol2(false);
+        setAnimateRow3(false);
+      }
+    };
+  }, [isOpen, isLoading]);
+
+  // Effect for theme visibility changes (when loading completes)
+  useEffect(() => {
+    // Update theme visibility when loading status changes
+    setThemeVisible(!isLoading);
+    
+    // If loading just completed (theme becomes visible), start grid animations after fade-in
+    if (!isLoading && isOpen) {
+      // Start grid animations after the fade-in animation completes plus a small delay
+      const timer = setTimeout(startGridAnimations, FADE_IN_DURATION + ANIMATION_START_DELAY);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, isOpen]);
+
+  const handlePlayClick = () => { 
+    // Mark as processing to prevent multiple clicks
+    setIsProcessingClick(true);
+    
+    try {
+      // If not in error state
+      if (!errorMessage) {
+        // Handle normal start logic
+        if (!isLoading && !errorMessage) {
+          onStartGame(); 
+        } else if (isLoading && !hasInitiatedStart) {
+          // If still loading and user hasn't initiated start yet, start the background loading
+          onStartGame();
+        }
+      }
+    } finally {
+      // Reset processing state after a small delay
+      setTimeout(() => {
+        setIsProcessingClick(false);
+      }, 300);
+    }
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
        const playButton = (e.currentTarget as HTMLElement).querySelector<HTMLButtonElement>('button:not([data-radix-focus-guard])');
        if (playButton && document.activeElement !== playButton) {
-          e.preventDefault();
-          handlePlayClick();
+         // Don't process if button should be disabled
+         if (!isButtonDisabled) {
+           if ((!isLoading && !errorMessage) || (isLoading && !hasInitiatedStart)) {
+              e.preventDefault();
+              handlePlayClick();
+           }
+         }
        }
     }
   };
@@ -339,6 +403,9 @@ const StartupModal: React.FC<StartupModalProps> = ({
     );
   };
 
+  // Calculate if button should be disabled
+  const isButtonDisabled = !!errorMessage || isProcessingClick;
+
   return (
     <>
       <ReducedMotionStyles />
@@ -352,7 +419,9 @@ const StartupModal: React.FC<StartupModalProps> = ({
           >
             <HeaderGroup>
               <ModalHeader id="modal-title">Daily Game</ModalHeader>
-              <ThemeText id="theme-description">Today's Theme - {themeName}</ThemeText>
+              <ThemeText id="theme-description" $visible={themeVisible}>
+                {themeName}
+              </ThemeText>
             </HeaderGroup>
 
             {renderMiniGrid()}
@@ -375,6 +444,8 @@ const StartupModal: React.FC<StartupModalProps> = ({
               onClick={handlePlayClick}
               aria-label="Start the game"
               autoFocus
+              disabled={isButtonDisabled}
+              $disabled={isButtonDisabled}
             >
               Let's Play!
             </PlayButton>

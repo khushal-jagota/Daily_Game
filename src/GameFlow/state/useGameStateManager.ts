@@ -12,10 +12,11 @@ interface CompletionData {
 
 /**
  * Custom hook that manages the game state for the crossword puzzle
+ * @param initialPuzzleData Optional initial puzzle data to use instead of the prototype
  */
-export function useGameStateManager() {
-  // Initialize state with the prototype puzzle data
-  const [puzzleData, setPuzzleData] = useState<CluesInput>(prototypePuzzle);
+export function useGameStateManager(initialPuzzleData?: CluesInput) {
+  // Initialize state with the provided puzzle data or fall back to the prototype
+  const [puzzleData, setPuzzleData] = useState<CluesInput>(initialPuzzleData || prototypePuzzle);
 
   // Initialize empty Map for completed words with their stage information
   const [completedWords, setCompletedWords] = useState<Map<string, CompletionData>>(new Map());
@@ -37,9 +38,21 @@ export function useGameStateManager() {
 
   // Compute the grid data once for lookups
   const [gridData, setGridData] = useState<GridData>(() => {
-    const { gridData } = createGridData(prototypePuzzle);
+    const data = initialPuzzleData || prototypePuzzle;
+    const { gridData } = createGridData(data);
     return gridData;
   });
+
+  // Recalculate grid data if initialPuzzleData changes (i.e., when Firebase data is loaded)
+  useEffect(() => {
+    if (initialPuzzleData) {
+      const { gridData: newGridData } = createGridData(initialPuzzleData);
+      setGridData(newGridData);
+      
+      // Also update puzzleData to ensure consistency
+      setPuzzleData(initialPuzzleData);
+    }
+  }, [initialPuzzleData]);
 
   // Ref to track the current stage for the next completion check
   const stageForNextCompletionCheckRef = useRef<number>(0);

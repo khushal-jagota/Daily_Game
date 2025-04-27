@@ -14,6 +14,7 @@ import VirtualKeyboard from './Keyboard/components/VirtualKeyboard'
 import ResultModal from './Sharing/components/ResultModal'
 import { CanvasData } from './Sharing/types'
 import StartupModal from './GameFlow/components/StartupModal'
+import { PuzzleProvider, usePuzzleLoader } from './Puzzle/PuzzleProvider'
 
 // Styled Start Game button
 const StartButton = styled.button`
@@ -58,16 +59,38 @@ const InitialScreenText = styled.p`
   max-width: 600px;
 `;
 
+// Simple loading indicator for when puzzle data is loading
+const LoadingScreen = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  width: 100%;
+  background-color: #121212;
+  color: white;
+  font-size: 1.5rem;
+`;
+
 function App() {
+  // Get puzzle data from the PuzzleProvider
+  const { loadingState, currentPuzzleMeta, currentPuzzleData, error } = usePuzzleLoader();
+  
   // Control game start state
   const [isGameStarted, setIsGameStarted] = useState(false);
   
   // State for modal visibility
   const [isStartupModalOpen, setIsStartupModalOpen] = useState(true);
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
+  
+  // Track whether user has clicked "Start Game" but we're still loading (Step 6)
+  const [hasInitiatedStart, setHasInitiatedStart] = useState(false);
 
   // Use the game state manager hook to get the state and actions
-  const gameState = useGameStateManager();
+  // Now passing the puzzle data from Firebase if available
+  const puzzleDataFromFirebase = loadingState === 'success' && currentPuzzleData?.puzzleData ? 
+    currentPuzzleData.puzzleData : undefined;
+  
+  const gameState = useGameStateManager(puzzleDataFromFirebase);
   
   // Ref to track the previous game completion state
   const prevIsGameCompleteRef = useRef<boolean>(gameState.isGameComplete);
@@ -135,11 +158,29 @@ function App() {
   // Derive the active clue text from puzzleData based on current direction and number
   const activeClueText = gameState.currentNumber && gameState.puzzleData?.[gameState.currentDirection]?.[gameState.currentNumber]?.clue || '';
   
-  // Start game handler - now handles both starting the game and closing the startup modal
+  // Start game handler - now with background loading support (Step 6)
   const handleStartGame = () => {
-    setIsStartupModalOpen(false);
-    setIsGameStarted(true);
+    // User has initiated game start
+    setHasInitiatedStart(true);
+    
+    // If data is already loaded, start immediately
+    if (loadingState === 'success') {
+      setIsStartupModalOpen(false);
+      setIsGameStarted(true);
+    }
+    // If data is still loading, the useEffect below will handle navigation once loading completes
   };
+  
+  // Auto-navigation effect - starts game when data loads after user clicks Start (Step 6)
+  useEffect(() => {
+    if (loadingState === 'success' && hasInitiatedStart && !isGameStarted) {
+      // Data has loaded and user has clicked start, but game hasn't started yet
+      setIsStartupModalOpen(false);
+      setIsGameStarted(true);
+      // Reset hasInitiatedStart to prevent re-triggering
+      setHasInitiatedStart(false);
+    }
+  }, [loadingState, hasInitiatedStart, isGameStarted]);
 
   // Handle virtual keyboard key presses
   const handleVirtualKeyPress = (button: string) => {
@@ -174,7 +215,7 @@ function App() {
     setIsResultModalOpen(false);
   };
   
-  // Prepare canvas data for the result modal
+  // Prepare canvas data for the result modal - now with puzzle data from Firebase
   const canvasData: CanvasData = {
     puzzleData: gameState.puzzleData,
     gridData: gameState.gridData,
@@ -182,8 +223,8 @@ function App() {
     elapsedTime,
     currentStage,
     theme: crosswordTheme,
-    puzzleNumber: (gameState.puzzleData as any)?.puzzleNumber || "1",
-    puzzleThemeName: (gameState.puzzleData as any)?.theme || "Sales"
+    puzzleNumber: currentPuzzleMeta?.puzzleNumber?.toString() || "1",
+    puzzleThemeName: currentPuzzleData?.themeTitle || "Daily Puzzle"
   };
   
   // Log the canvas data when the game completes to verify all required data is present
@@ -199,8 +240,8 @@ function App() {
     }
   }, [gameState.isGameComplete, currentStage, elapsedTime, gameState.completedWords, canvasData.puzzleNumber, canvasData.puzzleThemeName]);
 
-  // Get the theme name for the startup modal
-  const puzzleThemeName = (gameState.puzzleData as any)?.theme || "Sales";
+  // Get the theme name for the startup modal from Firebase data
+  const puzzleThemeName = currentPuzzleData?.themeTitle || "Sales";
 
   // --- Render ---
   return (
@@ -245,15 +286,18 @@ function App() {
           <div></div>
         )}
         
-        {/* Startup Modal */}
+        {/* Startup Modal - with theme name from Firebase and invisible until loaded */}
         <StartupModal 
           isOpen={isStartupModalOpen}
           onOpenChange={setIsStartupModalOpen}
           onStartGame={handleStartGame}
           themeName={puzzleThemeName}
+          isLoading={loadingState === 'loading' || loadingState === 'idle'}
+          hasInitiatedStart={hasInitiatedStart}
+          errorMessage={loadingState === 'error' ? 'Unable to load puzzle data' : undefined}
         />
         
-        {/* Result Modal */}
+        {/* Result Modal - now with puzzle number from Firebase */}
         <ResultModal 
           isOpen={isResultModalOpen}
           onClose={handleCloseResultModal}
@@ -264,4 +308,11 @@ function App() {
   );
 }
 
-export default App;
+// Wrap the exported App component with the PuzzleProvider
+const AppWithProviders = () => (
+  <PuzzleProvider>
+    <App />
+  </PuzzleProvider>
+);
+
+export default AppWithProviders;
