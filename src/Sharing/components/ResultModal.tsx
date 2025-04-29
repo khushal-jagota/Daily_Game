@@ -185,17 +185,19 @@ const ErrorMessage = styled(StatusContainer)`
   }
 `;
 
-// --- React Component --- (No logical changes, only styles updated)
+// Component Props
 interface ResultModalProps {
   isOpen: boolean;
   onClose: () => void;
   canvasData: CanvasData;
+  onShareButtonClick?: () => void; // Optional callback for tracking share button clicks
 }
 
 export const ResultModal: React.FC<ResultModalProps> = ({
   isOpen,
   onClose,
-  canvasData
+  canvasData,
+  onShareButtonClick
 }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -292,6 +294,11 @@ export const ResultModal: React.FC<ResultModalProps> = ({
 
   // Handle share button click (No changes here)
   const handleShare = async () => {
+    // Track the share button click if callback is provided
+    if (onShareButtonClick) {
+      onShareButtonClick();
+    }
+
     if (!imageBlob || !navigator.share) {
       alert('Sorry, sharing is not supported or image is not ready.');
       return;

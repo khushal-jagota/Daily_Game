@@ -14,6 +14,12 @@ const ClueContainer = styled.div`
   &:hover {
     background-color: rgba(0, 0, 0, 0.03);
   }
+
+  @media (min-width: 769px) {
+    max-width: 50%;
+    margin-left: auto;
+    margin-right: auto;
+  }
 `;
 
 const ClueHeader = styled.div`

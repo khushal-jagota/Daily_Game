@@ -13,6 +13,12 @@ export const KeyboardGlobalStyles = createGlobalStyle`
     touch-action: manipulation;
     user-select: none;
     width: 100%;
+
+    @media (min-width: 769px) {
+      max-width: 50%;
+      margin-left: auto;
+      margin-right: auto;
+    }
   }
 
   /* Style for all keyboard buttons with theme variables */

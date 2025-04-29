@@ -15,6 +15,7 @@ import ResultModal from './Sharing/components/ResultModal'
 import { CanvasData } from './Sharing/types'
 import StartupModal from './GameFlow/components/StartupModal'
 import { PuzzleProvider, usePuzzleLoader } from './Puzzle/PuzzleProvider'
+import { trackLevelStart, trackLevelEnd, trackShareButtonClick } from './Analytics/analytics'
 
 // Styled Start Game button
 const StartButton = styled.button`
@@ -131,13 +132,20 @@ function App() {
     // Check if the game JUST completed (was false previously, is true now)
     if (!prevIsGameCompleteRef.current && gameState.isGameComplete) {
       setIsResultModalOpen(true);
+      
+      // Track level end when the game is completed
+      if (currentPuzzleMeta?.puzzleNumber) {
+        // Convert elapsed time (ms) to seconds for analytics
+        const timeInSeconds = Math.floor(elapsedTime / 1000);
+        trackLevelEnd(currentPuzzleMeta.puzzleNumber, timeInSeconds);
+      }
     }
 
     // Update the ref AFTER the check for the next render cycle
     prevIsGameCompleteRef.current = gameState.isGameComplete;
 
   // Only depend on the value that determines the transition
-  }, [gameState.isGameComplete]); // Remove isResultModalOpen dependency
+  }, [gameState.isGameComplete, currentPuzzleMeta, elapsedTime]);
   
   // For testing: log the timer values to the console
   useEffect(() => {
@@ -167,6 +175,11 @@ function App() {
     if (loadingState === 'success') {
       setIsStartupModalOpen(false);
       setIsGameStarted(true);
+      
+      // Track level start when game begins
+      if (currentPuzzleMeta?.puzzleNumber) {
+        trackLevelStart(currentPuzzleMeta.puzzleNumber);
+      }
     }
     // If data is still loading, the useEffect below will handle navigation once loading completes
   };
@@ -177,10 +190,16 @@ function App() {
       // Data has loaded and user has clicked start, but game hasn't started yet
       setIsStartupModalOpen(false);
       setIsGameStarted(true);
+      
+      // Track level start when game begins after loading
+      if (currentPuzzleMeta?.puzzleNumber) {
+        trackLevelStart(currentPuzzleMeta.puzzleNumber);
+      }
+      
       // Reset hasInitiatedStart to prevent re-triggering
       setHasInitiatedStart(false);
     }
-  }, [loadingState, hasInitiatedStart, isGameStarted]);
+  }, [loadingState, hasInitiatedStart, isGameStarted, currentPuzzleMeta]);
 
   // Handle virtual keyboard key presses
   const handleVirtualKeyPress = (button: string) => {
@@ -213,6 +232,13 @@ function App() {
   // Close modal handler
   const handleCloseResultModal = () => {
     setIsResultModalOpen(false);
+  };
+  
+  // Handle share button click in ResultModal
+  const handleShareButtonClick = () => {
+    if (currentPuzzleMeta?.puzzleNumber) {
+      trackShareButtonClick(currentPuzzleMeta.puzzleNumber);
+    }
   };
   
   // Prepare canvas data for the result modal - now with puzzle data from Firebase
@@ -302,6 +328,7 @@ function App() {
           isOpen={isResultModalOpen}
           onClose={handleCloseResultModal}
           canvasData={canvasData}
+          onShareButtonClick={handleShareButtonClick}
         />
       </AppWrapper>
     </ThemeProvider>

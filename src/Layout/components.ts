@@ -87,4 +87,10 @@ export const TimerBarContainer = styled.div<{ $visible?: boolean }>`
   justify-content: space-between;
   width: 100%;
   background-color: ${(props) => props.theme.gridBackground || "#121212"};
+
+  @media (min-width: 769px) {
+    max-width: 50%;
+    margin-left: auto;
+    margin-right: auto;
+  }
 `;
