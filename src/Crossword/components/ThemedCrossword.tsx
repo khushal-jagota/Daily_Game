@@ -84,7 +84,19 @@ const ThemedCrossword: React.FC<ThemedCrosswordProps> = ({ gameState, onInputRef
           
           // Generate cell key and mark as completed with stage information
           const cellKey = getCellKey(r, c);
-          statusMap.set(cellKey, { completed: true, stage: completionData.stage });
+          
+          // MODIFIED: Use max-stage approach instead of last-write-wins
+          const existingStatus = statusMap.get(cellKey);
+          if (existingStatus?.completed) {
+            // Cell already has a status, use the higher stage value
+            statusMap.set(cellKey, { 
+              completed: true, 
+              stage: Math.max(existingStatus.stage, completionData.stage) 
+            });
+          } else {
+            // First time setting this cell
+            statusMap.set(cellKey, { completed: true, stage: completionData.stage });
+          }
         }
       } catch (error) {
         console.error(`[cellCompletionStatus] Error processing word ${wordId}:`, error);
