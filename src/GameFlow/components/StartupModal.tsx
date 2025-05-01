@@ -160,7 +160,7 @@ const MiniGridCell = styled.div<{ $isEmpty: boolean; $animateCol?: boolean; $ani
   ${({ $animateCol, $animateRow, $isEmpty, theme }) => !$isEmpty && ($animateCol || $animateRow) && css`
     background-color: ${$animateRow 
       ? (theme.completionStage3Background || highlightColorYellow) 
-      : (theme.completionStage2Background || highlightColorGreen)};
+      : (theme.completionStage1Background || highlightColorGreen)};
     border-color: transparent;
   `}
 `;
@@ -418,7 +418,7 @@ const StartupModal: React.FC<StartupModalProps> = ({
             onKeyDown={handleKeyDown}
           >
             <HeaderGroup>
-              <ModalHeader id="modal-title">Daily Game</ModalHeader>
+              <ModalHeader id="modal-title">Unnamed Game</ModalHeader>
               <ThemeText id="theme-description" $visible={themeVisible}>
                 {themeName}
               </ThemeText>
@@ -434,7 +434,7 @@ const StartupModal: React.FC<StartupModalProps> = ({
                 <InstructionContent>
                   <InstructionTitle id="instruction-title">Beat the Clock</InstructionTitle>
                   <InstructionText>
-                    The faster you solve, the better your final color. Watch the timer and aim for the best score!
+                    The faster you solve, the better your result. <br /> Speed + Strategy = Beauty
                   </InstructionText>
                 </InstructionContent>
               </InstructionBox>

@@ -305,7 +305,7 @@ export async function drawResultToCanvas(
     let puzzleThemeText = '';
 
     if (hasNumber) {
-        puzzleNumberText = `Puzzle #${data.puzzleNumber}`;
+        puzzleNumberText = `Unnamed #${data.puzzleNumber}`;
     }
     if (hasTheme) {
         puzzleThemeText = data.puzzleThemeName || '';
