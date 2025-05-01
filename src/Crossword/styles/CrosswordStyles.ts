@@ -28,11 +28,12 @@ export const crosswordTheme = {
   progressBarFill: '#28a745',       // Green fill for progress bar
   
   // Timer completion stage colors
-  completionStage1Background: '#2196F3', // Blue (0-30s)
-  completionStage2Background: '#4CAF50', // Green (31-70s)
-  completionStage3Background: '#FFC107', // Yellow (71-120s)
-  completionStage4Background: '#FF9800', // Orange (121-180s)
-  completionStage5Background: '#F44336', // Red (>180s)
+  completionStage1Background: '#28A745', // Stage 1: 0-30s (Green)
+  completionStage2Background: '#85C43F', // Stage 2: 31-75s (Lime)
+  completionStage3Background: '#CBA72F', // Stage 3: 76-135s (Yellow-Orange)
+  completionStage4Background: '#D6731B', // Stage 4: 136-210s (Orange)
+  completionStage5Background: '#C13E00', // Stage 5: 211-300s (Red-Orange)
+  completionStage6Background: '#7A3300', // Stage 6: >300s (Brown)
   
   // Virtual Keyboard styling
   keyboardBackground: '#121212',     // Match gridBackground 

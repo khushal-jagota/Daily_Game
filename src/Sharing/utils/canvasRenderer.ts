@@ -48,6 +48,7 @@ function getCellFillColor(stage: number, theme: typeof crosswordTheme): string {
     case 3: return theme.completionStage3Background;
     case 4: return theme.completionStage4Background;
     case 5: return theme.completionStage5Background;
+    case 6: return theme.completionStage6Background;
     default: return theme.cellBackground;
   }
 }
@@ -84,10 +85,10 @@ export async function drawResultToCanvas(
 
   try {
     // --- Define Styling Constants ---
-    const ACCENT_BORDER_WIDTH = 8; // Width of the colored accent frame (outermost visible layer)
-    const GREY_MATTING_WIDTH = 42; // Width of the grey matting area
-    const TOTAL_FRAME_WIDTH = ACCENT_BORDER_WIDTH + GREY_MATTING_WIDTH; // Combined width for positioning content
-    const OUTER_BORDER_RADIUS = 15; // Rounding for the entire image/frame
+    const ACCENT_BORDER_WIDTH = 10; // Increased by 20% (from 8)
+    const GREY_MATTING_WIDTH = 38; // Decreased by ~10% (from 42)
+    const TOTAL_FRAME_WIDTH = ACCENT_BORDER_WIDTH + GREY_MATTING_WIDTH; // Combined width for positioning content (48)
+    const OUTER_BORDER_RADIUS = 25; // Increased from 15 to maintain inner curve with new accent width
 
     const CONTENT_PADDING = 25; // Padding inside the grey matting (affects time/grid position relative to black bg)
     const CELL_GAP = 6;
@@ -104,7 +105,17 @@ export async function drawResultToCanvas(
     const TEXT_BOTTOM_MARGIN = 40; // Space between bottom of text and top of bottom *grey matting*
 
     // Calculate total reserved vertical space at the bottom for combined frame, margin, and text
-    const RESERVED_BOTTOM_SPACE = TOTAL_FRAME_WIDTH + TEXT_BOTTOM_MARGIN + FONT_SIZE_COMBINED_INFO;
+    // --- Calculate required text height dynamically ---
+    const LINE_SPACING_BOTTOM_TEXT = 10; // Space between the two lines of text
+    const hasNumber = data.puzzleNumber !== undefined && data.puzzleNumber !== null && data.puzzleNumber !== '';
+    const hasTheme = data.puzzleThemeName && data.puzzleThemeName.trim() !== '';
+    let requiredTextHeight = 0;
+    if (hasNumber && hasTheme) {
+      requiredTextHeight = 2 * FONT_SIZE_COMBINED_INFO + LINE_SPACING_BOTTOM_TEXT;
+    } else if (hasNumber || hasTheme) {
+      requiredTextHeight = FONT_SIZE_COMBINED_INFO;
+    }
+    const RESERVED_BOTTOM_SPACE = TOTAL_FRAME_WIDTH + TEXT_BOTTOM_MARGIN + requiredTextHeight;
 
     // --- Set Canvas Dimensions ---
     const dpr = window.devicePixelRatio || 1;
@@ -139,6 +150,7 @@ export async function drawResultToCanvas(
       case 3: timeColor = data.theme.completionStage3Background; break;
       case 4: timeColor = data.theme.completionStage4Background; break;
       case 5: timeColor = data.theme.completionStage5Background; break;
+      case 6: timeColor = data.theme.completionStage6Background; break;
       default: timeColor = TEXT_COLOR; // Fallback color
     }
 
@@ -152,17 +164,20 @@ export async function drawResultToCanvas(
     ctx.fillStyle = timeColor;
     ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-    // 2. Draw Grey Matting inset by Accent Border Width
+    // 2. Draw Grey Matting inset by Accent Border Width, using rounded rect
     ctx.fillStyle = '#2D2D2D';
-    ctx.fillRect(
-      ACCENT_BORDER_WIDTH,
-      ACCENT_BORDER_WIDTH,
-      canvasWidth - 2 * ACCENT_BORDER_WIDTH,
-      canvasHeight - 2 * ACCENT_BORDER_WIDTH
-    );
+    const greyRectX = ACCENT_BORDER_WIDTH;
+    const greyRectY = ACCENT_BORDER_WIDTH;
+    const greyRectWidth = canvasWidth - 2 * ACCENT_BORDER_WIDTH;
+    const greyRectHeight = canvasHeight - 2 * ACCENT_BORDER_WIDTH;
+    // Use a smaller radius for the grey matting: Outer Radius - Accent Border Width
+    const innerRadius = Math.max(0, OUTER_BORDER_RADIUS - ACCENT_BORDER_WIDTH);
+    drawRoundedRect(ctx, greyRectX, greyRectY, greyRectWidth, greyRectHeight, innerRadius);
+    ctx.fill();
 
     // 3. Draw Inner Black Background inset by Total Frame Width
     ctx.fillStyle = '#121212';
+    // The black background is still a sharp rectangle inset further
     ctx.fillRect(
       TOTAL_FRAME_WIDTH, // Inset by Accent + Grey
       TOTAL_FRAME_WIDTH,
@@ -249,29 +264,69 @@ export async function drawResultToCanvas(
       }
     }
 
-    // --- Combined Puzzle Info Text (Positioned near bottom) ---
-    let combinedPuzzleInfoText = '';
-    const hasNumber = data.puzzleNumber !== undefined && data.puzzleNumber !== null && data.puzzleNumber !== '';
-    const hasTheme = data.puzzleThemeName && data.puzzleThemeName.trim() !== '';
+    // --- Render Clue Numbers ---
+    // Iterate again to draw numbers on top of cell fills
+    const numberFontSize = Math.max(8, Math.floor(cellDrawSize * 0.3)); // Adjust font size based on cell size
+    ctx.font = `${numberFontSize}px ${FONT_FAMILY}`;
+    ctx.fillStyle = '#121212'; // Hardcoded black for now
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top'; // Align text to the top-left
 
-    if (hasNumber && hasTheme) {
-        combinedPuzzleInfoText = `Puzzle #${data.puzzleNumber} - ${data.puzzleThemeName}`;
-    } else if (hasNumber) {
-        combinedPuzzleInfoText = `Puzzle #${data.puzzleNumber}`;
-    } else if (hasTheme) {
-        combinedPuzzleInfoText = data.puzzleThemeName || '';
+    for (let row = 0; row < numRows; row++) {
+        for (let col = 0; col < numCols; col++) {
+            const cellData = data.gridData[row][col];
+            if (cellData.used && cellData.number) {
+                // Calculate position for the number (top-left corner of the cell draw area)
+                const cellAreaX = gridContentStartX + col * cellSizeWithGap;
+                const cellAreaY = gridContentOffsetY + row * cellSizeWithGap;
+                const cellDrawX = cellAreaX + CELL_GAP / 2;
+                const cellDrawY = cellAreaY + CELL_GAP / 2;
+
+                // Adjust position slightly for padding within the cell
+                const numberX = cellDrawX + CELL_CORNER_RADIUS * 0.5; // Small inset
+                const numberY = cellDrawY + CELL_CORNER_RADIUS * 0.5; // Small inset
+
+                ctx.fillText(cellData.number, numberX, numberY);
+            }
+        }
     }
 
-    if (combinedPuzzleInfoText) {
-        // Calculate Y position for the top of the text baseline, relative to bottom edge
-        const textStartY = canvasHeight - TOTAL_FRAME_WIDTH - TEXT_BOTTOM_MARGIN - FONT_SIZE_COMBINED_INFO;
-        const textCenterX = canvasWidth / 2; // Center horizontally
+    // --- Combined Puzzle Info Text (Positioned near bottom) ---
+    const bottomTextAnchorY = canvasHeight - TOTAL_FRAME_WIDTH - TEXT_BOTTOM_MARGIN;
+    const textCenterX = canvasWidth / 2;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom'; // Align baseline to the calculated Y position
+    ctx.font = `${FONT_SIZE_COMBINED_INFO}px ${FONT_FAMILY}`;
+    ctx.fillStyle = TEXT_COLOR;
 
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
-        ctx.font = `${FONT_SIZE_COMBINED_INFO}px ${FONT_FAMILY}`;
-        ctx.fillStyle = TEXT_COLOR;
-        ctx.fillText(combinedPuzzleInfoText, textCenterX, textStartY);
+    let textLine1Y: number | null = null;
+    let textLine2Y: number | null = null;
+    let puzzleNumberText = '';
+    let puzzleThemeText = '';
+
+    if (hasNumber) {
+        puzzleNumberText = `Puzzle #${data.puzzleNumber}`;
+    }
+    if (hasTheme) {
+        puzzleThemeText = data.puzzleThemeName || '';
+    }
+
+    // Calculate Y positions based on which lines exist
+    if (hasNumber && hasTheme) {
+        textLine2Y = bottomTextAnchorY;
+        textLine1Y = textLine2Y - FONT_SIZE_COMBINED_INFO - LINE_SPACING_BOTTOM_TEXT;
+    } else if (hasNumber) {
+        textLine1Y = bottomTextAnchorY;
+    } else if (hasTheme) {
+        textLine2Y = bottomTextAnchorY;
+    }
+
+    // Render the text lines
+    if (textLine1Y !== null && puzzleNumberText) {
+        ctx.fillText(puzzleNumberText, textCenterX, textLine1Y);
+    }
+    if (textLine2Y !== null && puzzleThemeText) {
+        ctx.fillText(puzzleThemeText, textCenterX, textLine2Y);
     }
 
     // --- Restore context from clipping state ---

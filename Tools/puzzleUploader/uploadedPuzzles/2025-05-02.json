@@ -1,0 +1,46 @@
+{
+  "themeTitle": "Atomic Habits",
+  "themeDescription": "The four stages of habit formation: Cue, Craving, Response, Reward (plus the systems that drive them).",
+  "puzzleData": {
+    "across": {
+      "3": {
+        "row": 2,
+        "col": 0,
+        "clue": "Triggers that initiate a behavior",
+        "answer": "CUES"
+      },
+      "4": {
+        "row": 4,
+        "col": 2,
+        "clue": "The actual step executed when your habit loop is triggered",
+        "answer": "ACTION"
+      },
+      "5": {
+        "row": 7,
+        "col": 0,
+        "clue": "Processes, not goals, that lead to success",
+        "answer": "SYSTEMS"
+      }
+    },
+    "down": {
+      "1": {
+        "row": 0,
+        "col": 5,
+        "clue": "Strong internal desire that makes you want something",
+        "answer": "CRAVING"
+      },
+      "2": {
+        "row": 1,
+        "col": 2,
+        "clue": "Benefit you receive that reinforces a behavior",
+        "answer": "REWARD"
+      },
+      "3": {
+        "row": 2,
+        "col": 0,
+        "clue": "Conscious decisions that shape identity",
+        "answer": "CHOICES"
+      }
+    }
+  }
+} 

@@ -1,0 +1,46 @@
+{
+  "themeTitle": "Never Split the Difference",
+  "themeDescription": "Tools for honest, empathetic, and empowering conversation.",
+  "puzzleData": {
+    "across": {
+      "1": {
+        "row": 0,
+        "col": 2,
+        "clue": "Fair negotiation approach focused on mutual benefit, not deception",
+        "answer": "ETHICAL"
+      },
+      "5": {
+        "row": 5,
+        "col": 0,
+        "clue": "Actively acknowledging others' emotions to build understanding and trust",
+        "answer": "EMPATHY"
+      },
+      "6": {
+        "row": 7,
+        "col": 0,
+        "clue": "Subtly reflecting someone's least words to encourage more detail",
+        "answer": "MIRRORING"
+      }
+    },
+    "down": {
+      "2": {
+        "row": 0,
+        "col": 8,
+        "clue": "Giving a name to fears to calm the conversation",
+        "answer": "LABELING"
+      },
+      "3": {
+        "row": 1,
+        "col": 0,
+        "clue": "Deliberate modulation of tone, speaking slow and calm, for influence",
+        "answer": "VOICE"
+      },
+      "4": {
+        "row": 2,
+        "col": 4,
+        "clue": "_____ over conversation, achieved by granting participants an illusion of agency",
+        "answer": "CONTROL"
+      }
+    }
+  }
+} 

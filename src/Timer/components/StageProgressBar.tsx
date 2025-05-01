@@ -33,6 +33,7 @@ const ProgressBarFill = styled.div<{ $ratio: number; $stage: number }>`
       case 3: return props.theme.completionStage3Background; // Yellow (71-120s)
       case 4: return props.theme.completionStage4Background; // Orange (121-180s)
       case 5: return props.theme.completionStage5Background; // Red (>180s)
+      case 6: return props.theme.completionStage6Background; // Brown (>300s)
       default: return props.theme.completionStage1Background; // Default to Stage 1 color
     }
   }};
@@ -42,7 +43,7 @@ const ProgressBarFill = styled.div<{ $ratio: number; $stage: number }>`
 interface StageProgressBarProps {
   /** Ratio of time remaining in the current stage (1.0 to 0.0) */
   ratio: number;
-  /** Current stage (0-5) */
+  /** Current stage (0-6) */
   currentStage: number;
   /** Whether the game is active */
   isGameActive: boolean;

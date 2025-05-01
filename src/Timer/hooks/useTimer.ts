@@ -28,11 +28,12 @@ interface UseTimerReturn {
   /**
    * Current completion stage based on elapsed time
    * 0: Game not started
-   * 1: 0-30s (Blue)
-   * 2: 31-70s (Green)
-   * 3: 71-120s (Yellow)
-   * 4: 121-180s (Orange)
-   * 5: >180s (Red)
+   * 1: 0-30s (Green)
+   * 2: 31-75s (Lime)
+   * 3: 76-135s (Yellow-Orange)
+   * 4: 136-210s (Orange)
+   * 5: 211-300s (Red-Orange)
+   * 6: >300s (Brown)
    */
   currentStage: number;
   
@@ -49,11 +50,12 @@ interface UseTimerReturn {
  * Index corresponds to stage transition points:
  * 0: Start
  * 1: Stage 1 to 2 transition (30s)
- * 2: Stage 2 to 3 transition (70s)
- * 3: Stage 3 to 4 transition (120s)
- * 4: Stage 4 to 5 transition (180s)
+ * 2: Stage 2 to 3 transition (75s)
+ * 3: Stage 3 to 4 transition (135s)
+ * 4: Stage 4 to 5 transition (210s)
+ * 5: Stage 5 to 6 transition (300s)
  */
-export const STAGE_THRESHOLDS = [0, 30, 70, 120, 180];
+export const STAGE_THRESHOLDS = [0, 30, 75, 135, 210, 300];
 
 /**
  * Custom hook that tracks game time and calculates completion stage.
@@ -120,31 +122,32 @@ export const useTimer = ({
   /**
    * Calculate the stage based on elapsed time
    * @param time - Time in seconds
-   * @returns Stage number (1-5)
+   * @returns Stage number (1-6)
    */
   const calculateStage = (time: number): number => {
     if (time <= STAGE_THRESHOLDS[0]) return 0; // Not started
-    if (time <= STAGE_THRESHOLDS[1]) return 1; // Stage 1: 0-30s (Blue)
-    if (time <= STAGE_THRESHOLDS[2]) return 2; // Stage 2: 31-70s (Green)
-    if (time <= STAGE_THRESHOLDS[3]) return 3; // Stage 3: 71-120s (Yellow)
-    if (time <= STAGE_THRESHOLDS[4]) return 4; // Stage 4: 121-180s (Orange)
-    return 5; // Stage 5: >180s (Red)
+    if (time <= STAGE_THRESHOLDS[1]) return 1; // Stage 1: 0-30s
+    if (time <= STAGE_THRESHOLDS[2]) return 2; // Stage 2: 31-75s
+    if (time <= STAGE_THRESHOLDS[3]) return 3; // Stage 3: 76-135s
+    if (time <= STAGE_THRESHOLDS[4]) return 4; // Stage 4: 136-210s
+    if (time <= STAGE_THRESHOLDS[5]) return 5; // Stage 5: 211-300s
+    return 6; // Stage 6: >300s
   };
   
   /**
    * Calculate the ratio of time remaining in the current stage (1.0 to 0.0)
    * @param time - Current elapsed time in seconds
-   * @param stage - Current stage (0-5)
+   * @param stage - Current stage (0-6)
    * @returns Ratio of time remaining in the current stage
    */
   const calculateStageTimeRemainingRatio = (time: number, stage: number): number => {
     // Handle Stage 0 (not started): return full bar
     if (stage === 0) return 1.0;
     
-    // Handle Stage 5 (overtime): return full bar
-    if (stage === 5) return 1.0;
+    // Handle Stage 6 (overtime): return full bar
+    if (stage === 6) return 1.0;
     
-    // For Stages 1-4, calculate the ratio based on time elapsed in the stage
+    // For Stages 1-5, calculate the ratio based on time elapsed in the stage
     const stageStartTime = STAGE_THRESHOLDS[stage - 1];
     const stageEndTime = STAGE_THRESHOLDS[stage];
     const stageDuration = stageEndTime - stageStartTime;
