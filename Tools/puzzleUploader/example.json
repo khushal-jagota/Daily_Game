@@ -1,0 +1,28 @@
+{
+    "themeDescription": "description",
+    "themeTitle": "Test",
+    "puzzleData": {
+        "across": {
+            "1": {
+            "row": 3,
+            "clue": "Offering Genuine Appreciation",
+            "answer": "PRAISE",
+            "col": 0
+            }
+        },
+        "down": {
+            "2": {
+            "col": 2,
+            "clue": "To understand another's perspective",
+            "answer": "EMPATHY",
+            "row": 0
+            },
+            "3": {
+            "clue": "Paying attention to understand",
+            "col": 4,
+            "answer": "LISTEN",
+            "row": 1
+            }
+        }
+      }
+    }

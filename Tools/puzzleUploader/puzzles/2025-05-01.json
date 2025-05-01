@@ -1,0 +1,40 @@
+{
+  "themeTitle": "Bulletproof Problem Solving",
+  "themeDescription": "To solve a problem effectively, break it into smaller parts. Logic trees help by organizing different aspects of a problem. For example, losing weight can be split into two main ideas: eating less or exercising more. Each of these can be broken down further into specific actions.\n\nA useful logic tree avoids overlap and covers all important factors. Different types exist depending on how much is known about the problem. Trying different approaches can reveal new insights. Since problem-solving is a process, updating the tree as you learn more is key. Once the structure is clear, unnecessary parts can be removed.",
+  "puzzleData": {
+    "across": {
+      "4": {
+        "clue": "To refine and improve solutions through repeated problem-solving cycles",
+        "answer": "ITERATE",
+        "row": 4,
+        "col": 0
+      },
+      "5": {
+        "clue": "The structured reasoning process behind problem-solving methods",
+        "answer": "LOGIC",
+        "row": 6,
+        "col": 0
+      }
+    },
+    "down": {
+      "1": {
+        "clue": "To remove unnecessary parts of a tree, both in logic and in nature",
+        "answer": "PRUNE",
+        "row": 0,
+        "col": 2
+      },
+      "2": {
+        "clue": "Factors that can be adjusted to disproportionately affect an outcome",
+        "answer": "LEVER",
+        "row": 1,
+        "col": 6
+      },
+      "3": {
+        "clue": "A division in a logic tree representing a part of a problem",
+        "answer": "BRANCH",
+        "row": 2,
+        "col": 4
+      }
+    }
+  }
+} 

@@ -1,0 +1,39 @@
+{
+  "meta": {
+    "current": {
+      "genesisDate": "2025-04-26",
+      "activePuzzleId": "2025-04-26-TEST1",
+      "puzzleNumber": 1
+    }
+  },
+  "puzzles": {
+    "2025-04-26-TEST1": {
+      "themeDescription": "description",
+      "puzzleData": {
+        "across": {
+          "1": {
+            "row": 3,
+            "clue": "Offfering Genuine Appreciation",
+            "answer": "PRAISE",
+            "col": 0
+          }
+        },
+        "down": {
+          "2": {
+            "col": 2,
+            "clue": "To understand another's perspective",
+            "answer": "EMPATHY",
+            "row": 0
+          },
+          "3": {
+            "clue": "Paying attention to understand",
+            "col": 4,
+            "answer": "LISTEN",
+            "row": 1
+          }
+        }
+      },
+      "themeTitle": "Test"
+    }
+  }
+}

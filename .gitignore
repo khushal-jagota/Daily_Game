@@ -23,3 +23,5 @@ firebase.config.ts
 *.sln
 *.sw?
 .env
+serviceAccountKey.json
+Tools/puzzleUploader/serviceAccountKey.json
